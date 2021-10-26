@@ -1,3 +1,25 @@
+use bevy::{
+    prelude::IntoSystem,
+    prelude::{App, Res},
+    DefaultPlugins,
+};
+use bevy_egui::{egui, EguiContext, EguiPlugin};
+
 fn main() {
-    println!("Hello, world!");
+    App::build()
+        .add_plugins(DefaultPlugins)
+        .add_plugin(EguiPlugin)
+        .add_system(ui_example.system())
+        .run();
+}
+
+fn ui_example(egui_context: Res<EguiContext>) {
+    egui::Window::new("Hello").show(egui_context.ctx(), |ui| {
+        ui.label("world");
+        ui.label("world2");
+        ui.label("world3");
+        ui.label("world4");
+        ui.label("world5");
+        ui.label("world6");
+    });
 }
