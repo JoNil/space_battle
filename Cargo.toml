@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 bevy = "0.5"
 bevy_egui = "0.7"
+bevy_flycam = "0.5"
