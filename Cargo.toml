@@ -9,3 +9,9 @@ edition = "2021"
 bevy = "0.5"
 bevy_egui = "0.7"
 bevy_flycam = "0.5"
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.dev]
+opt-level = 1

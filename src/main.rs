@@ -116,12 +116,11 @@ fn add_test_objects(
         })
         .insert_bundle(ShipBundle::default());
 
-    // light
     commands.spawn_bundle(LightBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 5.0, 5.0)),
         ..Default::default()
     });
-    // camera
+
     commands
         .spawn_bundle(PerspectiveCameraBundle {
             transform: Transform::from_translation(Vec3::new(0.0, 0.0, 8.0))
