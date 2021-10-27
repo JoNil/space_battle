@@ -1,31 +1,35 @@
 use bevy::{
+    input::Input,
     math::{DVec3, Vec3},
     pbr::{LightBundle, PbrBundle},
-    prelude::{shape, Color, IntoSystem, Query},
     prelude::{
-        App, Assets, Commands, Mesh, Msaa, PerspectiveCameraBundle, Res, ResMut, StandardMaterial,
-        Transform,
+        info, App, Assets, Commands, KeyCode, Mesh, Msaa, PerspectiveCameraBundle, Res, ResMut,
+        StandardMaterial, Transform,
     },
+    prelude::{shape, Color, IntoSystem, Query},
     DefaultPlugins,
 };
 use bevy_egui::{egui, EguiContext, EguiPlugin};
 use bevy_flycam::{FlyCam, MovementSettings, NoCameraPlayerPlugin};
-use physics::{PhysicsPlugin, Position};
+use physics::{Mass, PhysicsBundle, PhysicsPlugin, Position, Velocity};
+use ship::ShipBundle;
 
 mod physics;
+mod ship;
 
 fn main() {
     App::build()
         .insert_resource(Msaa { samples: 4 })
         .insert_resource(MovementSettings {
-            sensitivity: 0.00015, // default: 0.00012
-            speed: 12.0,          // default: 12.0
+            sensitivity: 0.000075, // default: 0.00012
+            speed: 12.0,           // default: 12.0
         })
         .add_plugins(DefaultPlugins)
         .add_plugin(NoCameraPlayerPlugin)
         .add_plugin(EguiPlugin)
         .add_plugin(PhysicsPlugin)
         .add_startup_system(add_test_objects.system())
+        .add_system(keyboard_input_system.system())
         .add_system(ui_example.system())
         .run();
 }
@@ -33,12 +37,16 @@ fn main() {
 fn ui_example(egui_context: Res<EguiContext>, query: Query<&Position>) {
     egui::Window::new("Hello").show(egui_context.ctx(), |ui| {
         for pos in query.iter() {
-            ui.label(format!("Position: {:?}", pos.pos));
+            ui.label(format!("Position: {:?}", pos.0));
         }
     });
 }
 
-struct Ship;
+fn keyboard_input_system(keyboard: Res<Input<KeyCode>>) {
+    if keyboard.pressed(KeyCode::A) {
+        info!("'A' currently pressed");
+    }
+}
 
 fn add_test_objects(
     mut commands: Commands,
@@ -59,10 +67,13 @@ fn add_test_objects(
             }),
             ..Default::default()
         })
-        .insert(Ship)
-        .insert(Position {
-            pos: DVec3::new(0.0, 0.0, -1.0),
-        });
+        .insert_bundle(PhysicsBundle {
+            pos: Position(DVec3::new(0.0, 0.0, -1.0)),
+            vel: Velocity(DVec3::new(0.0, 0.0, 0.0)),
+            mass: Mass(1.0),
+        })
+        .insert_bundle(ShipBundle::default());
+
     commands
         .spawn_bundle(PbrBundle {
             mesh: meshes.add(Mesh::from(shape::Icosphere {
@@ -77,10 +88,13 @@ fn add_test_objects(
             }),
             ..Default::default()
         })
-        .insert(Ship)
-        .insert(Position {
-            pos: DVec3::new(1.0, 0.0, 0.0),
-        });
+        .insert_bundle(PhysicsBundle {
+            pos: Position(DVec3::new(1.0, 0.0, 0.0)),
+            vel: Velocity(DVec3::new(1.0, 0.0, 0.0)),
+            mass: Mass(1.0),
+        })
+        .insert_bundle(ShipBundle::default());
+
     commands
         .spawn_bundle(PbrBundle {
             mesh: meshes.add(Mesh::from(shape::Icosphere {
@@ -95,10 +109,12 @@ fn add_test_objects(
             }),
             ..Default::default()
         })
-        .insert(Ship)
-        .insert(Position {
-            pos: DVec3::new(-1.0, 0.0, 0.0),
-        });
+        .insert_bundle(PhysicsBundle {
+            pos: Position(DVec3::new(-1.0, 0.0, 0.0)),
+            vel: Velocity(DVec3::new(-1.0, 0.0, 0.0)),
+            mass: Mass(1.0),
+        })
+        .insert_bundle(ShipBundle::default());
 
     // light
     commands.spawn_bundle(LightBundle {
