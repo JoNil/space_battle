@@ -6,13 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = "0.5"
+bevy =  { version = "0.5", features = ["jpeg"] }
 bevy_egui = "0.7"
 bevy_flycam = "0.5"
-bevy_rapier3d = { git = "https://github.com/dimforge/bevy_rapier.git", feature = ["parallel", "simd-stable"] }
-
-[profile.dev.package."*"]
-opt-level = 3
-
-[profile.dev]
-opt-level = 1
+bevy_rapier3d = { git = "https://github.com/dimforge/bevy_rapier.git", features = ["parallel", "simd-stable"] }

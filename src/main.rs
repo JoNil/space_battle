@@ -4,7 +4,7 @@ use bevy::{
     pbr::{LightBundle, PbrBundle},
     prelude::{
         info, App, Assets, Commands, KeyCode, Mesh, Msaa, PerspectiveCameraBundle, Res, ResMut,
-        StandardMaterial, Transform,
+        SpawnSceneCommands, StandardMaterial, Transform,
     },
     prelude::{
         shape, AppBuilder, AssetServer, Color, CoreStage, IntoSystem, Plugin, Query, TextBundle,
@@ -20,10 +20,7 @@ use bevy_rapier3d::{
     physics::{
         ColliderBundle, ColliderPositionSync, NoUserData, RapierPhysicsPlugin, RigidBodyBundle,
     },
-    prelude::{
-        ColliderShape, MassProperties, PhysicsPipeline, RigidBodyForces, RigidBodyMassProps,
-        RigidBodyVelocity,
-    },
+    prelude::{ColliderShape, PhysicsPipeline, RigidBodyForces, RigidBodyVelocity},
     render::{ColliderDebugRender, RapierRenderPlugin},
 };
 use physics::{Mass, PhysicsBundle, PhysicsPlugin, Position, Velocity};
@@ -71,6 +68,7 @@ fn add_test_objects(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    asset_server: Res<AssetServer>,
 ) {
     commands
         .spawn_bundle(PbrBundle {
@@ -134,6 +132,16 @@ fn add_test_objects(
             mass: Mass(1.0),
         })
         .insert_bundle(ShipBundle::default());
+
+    commands.spawn_scene(
+        asset_server.load(
+            format!(
+                "{}/assets/models/space_ship/scene.gltf#Scene0",
+                env!("CARGO_MANIFEST_DIR")
+            )
+            .as_str(),
+        ),
+    );
 
     commands.spawn_bundle(LightBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 5.0, 5.0)),
