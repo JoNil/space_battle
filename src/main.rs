@@ -133,15 +133,7 @@ fn add_test_objects(
         })
         .insert_bundle(ShipBundle::default());
 
-    commands.spawn_scene(
-        asset_server.load(
-            format!(
-                "{}/assets/models/space_ship/scene.gltf#Scene0",
-                env!("CARGO_MANIFEST_DIR")
-            )
-            .as_str(),
-        ),
-    );
+    commands.spawn_scene(asset_server.load("models/space_ship/scene.gltf#Scene0"));
 
     commands.spawn_bundle(LightBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 5.0, 5.0)),
