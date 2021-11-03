@@ -1,10 +1,12 @@
+use std::f32::consts::PI;
+
 use bevy::{
     input::Input,
-    math::{DVec3, Vec3},
+    math::{DVec3, Quat, Vec3},
     pbr::{LightBundle, PbrBundle},
     prelude::{
-        info, App, Assets, Commands, KeyCode, Mesh, Msaa, PerspectiveCameraBundle, Res, ResMut,
-        SpawnSceneCommands, StandardMaterial, Transform,
+        info, App, Assets, BuildChildren, Commands, KeyCode, Mesh, Msaa, PerspectiveCameraBundle,
+        Res, ResMut, SpawnSceneAsChildCommands, SpawnSceneCommands, StandardMaterial, Transform,
     },
     prelude::{
         shape, AppBuilder, AssetServer, Color, CoreStage, IntoSystem, Plugin, Query, TextBundle,
@@ -14,8 +16,11 @@ use bevy::{
     ui::{AlignSelf, Style},
     DefaultPlugins,
 };
-use bevy_egui::{egui, EguiContext, EguiPlugin};
-use bevy_flycam::{FlyCam, MovementSettings, NoCameraPlayerPlugin};
+use bevy_egui::{
+    egui::{self, DragValue},
+    EguiContext, EguiPlugin,
+};
+use bevy_prototype_debug_lines::DebugLinesPlugin;
 use bevy_rapier3d::{
     physics::{
         ColliderBundle, ColliderPositionSync, NoUserData, RapierPhysicsPlugin, RigidBodyBundle,
@@ -23,10 +28,10 @@ use bevy_rapier3d::{
     prelude::{ColliderShape, PhysicsPipeline, RigidBodyForces, RigidBodyVelocity},
     render::{ColliderDebugRender, RapierRenderPlugin},
 };
-use physics::{Mass, PhysicsBundle, PhysicsPlugin, Position, Velocity};
-use ship::ShipBundle;
+use camera::{CameraPlugin, FlyCam, MovementSettings};
+use ship::{debug_thruster, player_thrusters, PlayerShip, Thruster, ThrusterGroup, Thrusters};
 
-mod physics;
+mod camera;
 mod ship;
 
 fn main() {
@@ -37,31 +42,33 @@ fn main() {
             speed: 12.0,           // default: 12.0
         })
         .add_plugins(DefaultPlugins)
-        .add_plugin(NoCameraPlayerPlugin)
+        .add_plugin(DebugLinesPlugin)
+        .add_plugin(CameraPlugin)
         .add_plugin(EguiPlugin)
-        .add_plugin(PhysicsPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierRenderPlugin)
         .add_plugin(DebugUiPlugin)
-        .add_system(keyboard_input_system.system())
+        .add_system(player_thrusters.system())
         .add_system(ui_example.system())
+        .add_system(debug_thruster.system())
         .add_startup_system(add_test_objects.system())
         .add_startup_system(setup_physics.system())
         .run();
 }
 
-fn ui_example(egui_context: Res<EguiContext>, query: Query<&Position>) {
+fn ui_example(egui_context: Res<EguiContext>, mut query: Query<&mut Thrusters>) {
     egui::Window::new("Hello").show(egui_context.ctx(), |ui| {
-        for pos in query.iter() {
-            ui.label(format!("Mass: {:#?}", pos.0));
+        for mut thrusters in query.iter_mut() {
+            for thruster in &mut thrusters.thrusters {
+                ui.horizontal(|ui| {
+                    ui.label("Thruster");
+                    ui.add(DragValue::new(&mut thruster.offset.x).speed(0.01));
+                    ui.add(DragValue::new(&mut thruster.offset.y).speed(0.01));
+                    ui.add(DragValue::new(&mut thruster.offset.z).speed(0.01));
+                });
+            }
         }
     });
-}
-
-fn keyboard_input_system(keyboard: Res<Input<KeyCode>>) {
-    if keyboard.pressed(KeyCode::A) {
-        info!("'A' currently pressed");
-    }
 }
 
 fn add_test_objects(
@@ -70,71 +77,79 @@ fn add_test_objects(
     mut materials: ResMut<Assets<StandardMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
-    commands
-        .spawn_bundle(PbrBundle {
-            mesh: meshes.add(Mesh::from(shape::Icosphere {
-                radius: 0.45,
-                subdivisions: 32,
-            })),
-            material: materials.add(StandardMaterial {
-                base_color: Color::hex("ff1230").unwrap(),
-                metallic: 1.0,
-                roughness: 0.12,
-                ..Default::default()
-            }),
-            ..Default::default()
-        })
-        .insert_bundle(PhysicsBundle {
-            pos: Position(DVec3::new(0.0, 0.0, -1.0)),
-            vel: Velocity(DVec3::new(0.0, 0.0, 0.0)),
-            mass: Mass(1.0),
-        })
-        .insert_bundle(ShipBundle::default());
+    {
+        // Spawn player ship
 
-    commands
-        .spawn_bundle(PbrBundle {
-            mesh: meshes.add(Mesh::from(shape::Icosphere {
-                radius: 0.45,
-                subdivisions: 32,
-            })),
-            material: materials.add(StandardMaterial {
-                base_color: Color::hex("30ff12").unwrap(),
-                metallic: 1.0,
-                roughness: 0.12,
-                ..Default::default()
-            }),
-            ..Default::default()
-        })
-        .insert_bundle(PhysicsBundle {
-            pos: Position(DVec3::new(1.0, 0.0, 0.0)),
-            vel: Velocity(DVec3::new(1.0, 0.0, 0.0)),
-            mass: Mass(1.0),
-        })
-        .insert_bundle(ShipBundle::default());
+        let mut rigid_body = RigidBodyBundle {
+            position: [0.0, 0.0, 0.0].into(),
+            forces: RigidBodyForces {
+                gravity_scale: 0.0,
+                ..RigidBodyForces::default()
+            },
+            ..RigidBodyBundle::default()
+        };
 
-    commands
-        .spawn_bundle(PbrBundle {
-            mesh: meshes.add(Mesh::from(shape::Icosphere {
-                radius: 0.45,
-                subdivisions: 32,
-            })),
-            material: materials.add(StandardMaterial {
-                base_color: Color::hex("1230ff").unwrap(),
-                metallic: 1.0,
-                roughness: 0.12,
-                ..Default::default()
-            }),
-            ..Default::default()
-        })
-        .insert_bundle(PhysicsBundle {
-            pos: Position(DVec3::new(-1.0, 0.0, 0.0)),
-            vel: Velocity(DVec3::new(-1.0, 0.0, 0.0)),
-            mass: Mass(1.0),
-        })
-        .insert_bundle(ShipBundle::default());
+        let collider = ColliderBundle {
+            shape: ColliderShape::cuboid(1.0, 1.0, 1.0),
+            ..ColliderBundle::default()
+        };
 
-    commands.spawn_scene(asset_server.load("models/space_ship/scene.gltf#Scene0"));
+        rigid_body
+            .mass_properties
+            .local_mprops
+            .set_mass(100.0, true);
 
+        commands
+            .spawn()
+            .insert_bundle(rigid_body)
+            .insert_bundle(collider)
+            .insert(ColliderDebugRender::with_id(0))
+            .insert(ColliderPositionSync::Discrete)
+            .insert(Thrusters {
+                thrusters: Vec::from([
+                    Thruster {
+                        offset: Vec3::new(4.0, 0.0, 0.0),
+                        direction: Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
+                        thrust: 200.0,
+                        group: ThrusterGroup::FORWARD,
+                    },
+                    Thruster {
+                        offset: Vec3::new(-4.0, 0.0, 0.0),
+                        direction: Quat::from_axis_angle(Vec3::Y, PI / 2.0),
+                        thrust: 50.0,
+                        group: ThrusterGroup::BACKWARD,
+                    },
+                    Thruster {
+                        offset: Vec3::new(4.0, 0.0, -1.0),
+                        direction: Quat::from_axis_angle(Vec3::Y, 0.0),
+                        thrust: 1.0,
+                        group: ThrusterGroup::LEFT | ThrusterGroup::NYROT,
+                    },
+                    Thruster {
+                        offset: Vec3::new(4.0, 0.0, 1.0),
+                        direction: Quat::from_axis_angle(Vec3::Y, PI),
+                        thrust: 1.0,
+                        group: ThrusterGroup::RIGHT | ThrusterGroup::YROT,
+                    },
+                    Thruster {
+                        offset: Vec3::new(-4.0, 0.0, -1.0),
+                        direction: Quat::from_axis_angle(Vec3::Y, 0.0),
+                        thrust: 1.0,
+                        group: ThrusterGroup::LEFT | ThrusterGroup::YROT,
+                    },
+                    Thruster {
+                        offset: Vec3::new(-4.0, 0.0, 1.0),
+                        direction: Quat::from_axis_angle(Vec3::Y, PI),
+                        thrust: 1.0,
+                        group: ThrusterGroup::RIGHT | ThrusterGroup::NYROT,
+                    },
+                ]),
+            })
+            .insert(PlayerShip)
+            .with_children(|p| {
+                p.spawn_scene(asset_server.load("models/space_ship/scene.gltf#Scene0"));
+            });
+    }
     commands.spawn_bundle(LightBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 5.0, 5.0)),
         ..Default::default()
@@ -150,9 +165,7 @@ fn add_test_objects(
 }
 
 pub fn setup_physics(mut commands: Commands) {
-    /*
-     * Create the cubes
-     */
+    // Create the cubes
     let num = 8;
     let rad = 1.0;
 
@@ -168,7 +181,7 @@ pub fn setup_physics(mut commands: Commands) {
         for i in 0..num {
             for k in 0usize..num {
                 let x = i as f32 * shift - centerx + offset;
-                let y = j as f32 * shift + centery + 3.0;
+                let y = j as f32 * shift + centery - 15.0;
                 let z = k as f32 * shift - centerz + offset;
                 color += 1;
 
@@ -199,39 +212,6 @@ pub fn setup_physics(mut commands: Commands) {
         }
 
         offset -= 0.05 * rad * (num as f32 - 1.0);
-    }
-
-    {
-        // Build the rigid body.
-        let mut rigid_body = RigidBodyBundle {
-            position: [-20.0, 10.0, 30.0].into(),
-            velocity: RigidBodyVelocity {
-                linvel: Vec3::new(0.0, 30.0, -70.0).into(),
-                ..RigidBodyVelocity::default()
-            },
-            forces: RigidBodyForces {
-                gravity_scale: 0.0,
-                ..RigidBodyForces::default()
-            },
-            ..RigidBodyBundle::default()
-        };
-
-        rigid_body
-            .mass_properties
-            .local_mprops
-            .set_mass(100.0, true);
-
-        let collider = ColliderBundle {
-            shape: ColliderShape::cuboid(3.0 * rad, 3.0 * rad, 3.0 * rad),
-            ..ColliderBundle::default()
-        };
-
-        commands
-            .spawn()
-            .insert_bundle(rigid_body)
-            .insert_bundle(collider)
-            .insert(ColliderDebugRender::with_id(color))
-            .insert(ColliderPositionSync::Discrete);
     }
 }
 

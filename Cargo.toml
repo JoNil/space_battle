@@ -8,5 +8,6 @@ edition = "2021"
 [dependencies]
 bevy =  { version = "0.5", features = ["jpeg"] }
 bevy_egui = "0.7"
-bevy_flycam = "0.5"
+bevy_prototype_debug_lines = "0.3"
 bevy_rapier3d = { git = "https://github.com/dimforge/bevy_rapier.git", features = ["parallel", "simd-stable"] }
+bitflags = "1"
