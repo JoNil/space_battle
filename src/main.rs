@@ -29,7 +29,10 @@ use bevy_rapier3d::{
     render::{ColliderDebugRender, RapierRenderPlugin},
 };
 use camera::{CameraPlugin, FlyCam, MovementSettings};
-use ship::{debug_thruster, player_thrusters, PlayerShip, Thruster, ThrusterGroup, Thrusters};
+use ship::{
+    debug_thruster, player_thrusters, thrusters, OrientationRegulator, PlayerShip, Thruster,
+    ThrusterGroup, Thrusters,
+};
 
 mod camera;
 mod ship;
@@ -49,6 +52,7 @@ fn main() {
         .add_plugin(RapierRenderPlugin)
         .add_plugin(DebugUiPlugin)
         .add_system(player_thrusters.system())
+        .add_system(thrusters.system())
         .add_system(ui_example.system())
         .add_system(debug_thruster.system())
         .add_startup_system(add_test_objects.system())
@@ -220,8 +224,10 @@ fn add_test_objects(
                         group: ThrusterGroup::UP | ThrusterGroup::NXROT | ThrusterGroup::NZROT,
                     },
                 ]),
+                groups_to_fire: ThrusterGroup::NONE,
             })
             .insert(PlayerShip)
+            .insert(OrientationRegulator::default())
             .with_children(|p| {
                 p.spawn_scene(asset_server.load("models/space_ship/scene.gltf#Scene0"));
                 p.spawn_bundle(PerspectiveCameraBundle {

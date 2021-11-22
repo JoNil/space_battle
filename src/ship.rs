@@ -1,7 +1,7 @@
 use bevy::{
     input::Input,
     math::{Quat, Vec3},
-    prelude::{KeyCode, Query, Res, ResMut, Transform},
+    prelude::{Color, KeyCode, Query, Res, ResMut, Transform},
 };
 use bevy_prototype_debug_lines::DebugLines;
 use bevy_rapier3d::prelude::{RigidBodyForces, RigidBodyMassProps};
@@ -26,6 +26,8 @@ bitflags! {
     }
 }
 
+pub struct PlayerShip;
+
 #[derive(Default)]
 pub struct Thruster {
     pub offset: Vec3,
@@ -37,76 +39,87 @@ pub struct Thruster {
 #[derive(Default)]
 pub struct Thrusters {
     pub thrusters: Vec<Thruster>,
+    pub groups_to_fire: ThrusterGroup,
 }
 
-pub struct PlayerShip;
+#[derive(Default)]
+pub struct OrientationRegulator {
+    target: Quat,
+}
 
 pub fn player_thrusters(
+    mut query: Query<(&PlayerShip, &mut Thrusters)>,
+    keyboard: Res<Input<KeyCode>>,
+) {
+    let mut groups_to_fire = ThrusterGroup::NONE;
+
+    if keyboard.pressed(KeyCode::W) {
+        groups_to_fire |= ThrusterGroup::FORWARD;
+    }
+
+    if keyboard.pressed(KeyCode::S) {
+        groups_to_fire |= ThrusterGroup::BACKWARD;
+    }
+
+    if keyboard.pressed(KeyCode::D) {
+        groups_to_fire |= ThrusterGroup::RIGHT;
+    }
+
+    if keyboard.pressed(KeyCode::A) {
+        groups_to_fire |= ThrusterGroup::LEFT;
+    }
+
+    if keyboard.pressed(KeyCode::Space) {
+        groups_to_fire |= ThrusterGroup::UP;
+    }
+
+    if keyboard.pressed(KeyCode::LShift) {
+        groups_to_fire |= ThrusterGroup::DOWN;
+    }
+
+    if keyboard.pressed(KeyCode::Numpad6) {
+        groups_to_fire |= ThrusterGroup::NYROT;
+    }
+
+    if keyboard.pressed(KeyCode::Numpad4) {
+        groups_to_fire |= ThrusterGroup::YROT;
+    }
+
+    if keyboard.pressed(KeyCode::Numpad8) {
+        groups_to_fire |= ThrusterGroup::NXROT;
+    }
+
+    if keyboard.pressed(KeyCode::Numpad5) {
+        groups_to_fire |= ThrusterGroup::XROT;
+    }
+
+    if keyboard.pressed(KeyCode::Numpad9) {
+        groups_to_fire |= ThrusterGroup::NZROT;
+    }
+
+    if keyboard.pressed(KeyCode::Numpad7) {
+        groups_to_fire |= ThrusterGroup::ZROT;
+    }
+
+    for (_, mut thrusters) in query.iter_mut() {
+        thrusters.groups_to_fire |= groups_to_fire;
+    }
+}
+
+pub fn thrusters(
     mut query: Query<(
-        &PlayerShip,
         &Transform,
-        &Thrusters,
+        &mut Thrusters,
         &RigidBodyMassProps,
         &mut RigidBodyForces,
     )>,
-    keyboard: Res<Input<KeyCode>>,
     mut lines: ResMut<DebugLines>,
 ) {
-    for (_, transform, thrusters, rb_mprops, mut forces) in query.iter_mut() {
-        let mut groups_to_fire = ThrusterGroup::NONE;
-
-        if keyboard.pressed(KeyCode::W) {
-            groups_to_fire |= ThrusterGroup::FORWARD;
-        }
-
-        if keyboard.pressed(KeyCode::S) {
-            groups_to_fire |= ThrusterGroup::BACKWARD;
-        }
-
-        if keyboard.pressed(KeyCode::D) {
-            groups_to_fire |= ThrusterGroup::RIGHT;
-        }
-
-        if keyboard.pressed(KeyCode::A) {
-            groups_to_fire |= ThrusterGroup::LEFT;
-        }
-
-        if keyboard.pressed(KeyCode::Space) {
-            groups_to_fire |= ThrusterGroup::UP;
-        }
-
-        if keyboard.pressed(KeyCode::LShift) {
-            groups_to_fire |= ThrusterGroup::DOWN;
-        }
-
-        if keyboard.pressed(KeyCode::Numpad6) {
-            groups_to_fire |= ThrusterGroup::NYROT;
-        }
-
-        if keyboard.pressed(KeyCode::Numpad4) {
-            groups_to_fire |= ThrusterGroup::YROT;
-        }
-
-        if keyboard.pressed(KeyCode::Numpad8) {
-            groups_to_fire |= ThrusterGroup::NXROT;
-        }
-
-        if keyboard.pressed(KeyCode::Numpad5) {
-            groups_to_fire |= ThrusterGroup::XROT;
-        }
-
-        if keyboard.pressed(KeyCode::Numpad9) {
-            groups_to_fire |= ThrusterGroup::NZROT;
-        }
-
-        if keyboard.pressed(KeyCode::Numpad7) {
-            groups_to_fire |= ThrusterGroup::ZROT;
-        }
-
+    for (transform, mut thrusters, rb_mprops, mut forces) in query.iter_mut() {
         for thruster in thrusters
             .thrusters
             .iter()
-            .filter(|thruster| thruster.group.intersects(groups_to_fire))
+            .filter(|thruster| thruster.group.intersects(thrusters.groups_to_fire))
         {
             let pos = transform.mul_vec3(thruster.offset);
             let force =
@@ -114,8 +127,10 @@ pub fn player_thrusters(
 
             forces.apply_force_at_point(rb_mprops, force.into(), pos.into());
 
-            lines.line(pos, pos + 0.2 * force.normalize(), 0.0);
+            lines.line_colored(pos, pos + 0.2 * force.normalize(), 0.0, Color::RED);
         }
+
+        thrusters.groups_to_fire = ThrusterGroup::NONE;
     }
 }
 
@@ -127,12 +142,16 @@ pub fn debug_thruster(query: Query<(&Transform, &Thrusters)>, mut lines: ResMut<
             let end = pos + 0.3 * orientaion;
             lines.line(pos, end, 0.0);
 
-            lines.line(pos, pos + 0.1 * Vec3::X, 0.0);
-            lines.line(pos, pos - 0.1 * Vec3::X, 0.0);
-            lines.line(pos, pos + 0.1 * Vec3::Y, 0.0);
-            lines.line(pos, pos - 0.1 * Vec3::Y, 0.0);
-            lines.line(pos, pos + 0.1 * Vec3::Z, 0.0);
-            lines.line(pos, pos - 0.1 * Vec3::Z, 0.0);
+            let local_x = transform.rotation * Vec3::X;
+            let local_y = transform.rotation * Vec3::Y;
+            let local_z = transform.rotation * Vec3::Z;
+
+            lines.line(pos, pos + 0.1 * local_x, 0.0);
+            lines.line(pos, pos - 0.1 * local_x, 0.0);
+            lines.line(pos, pos + 0.1 * local_y, 0.0);
+            lines.line(pos, pos - 0.1 * local_y, 0.0);
+            lines.line(pos, pos + 0.1 * local_z, 0.0);
+            lines.line(pos, pos - 0.1 * local_z, 0.0);
         }
     }
 }
