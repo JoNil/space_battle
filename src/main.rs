@@ -108,60 +108,134 @@ fn add_test_objects(
             .insert(Thrusters {
                 thrusters: Vec::from([
                     Thruster {
-                        offset: Vec3::new(4.0, 0.0, 0.0),
-                        direction: Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
+                        offset: Vec3::new(0.0, 0.0, 4.0),
+                        direction: Quat::from_axis_angle(Vec3::Y, PI),
                         thrust: 200.0,
                         group: ThrusterGroup::FORWARD,
                     },
                     Thruster {
-                        offset: Vec3::new(-4.0, 0.0, 0.0),
-                        direction: Quat::from_axis_angle(Vec3::Y, PI / 2.0),
+                        offset: Vec3::new(0.0, 0.0, -4.0),
+                        direction: Quat::from_axis_angle(Vec3::Y, 0.0),
                         thrust: 50.0,
                         group: ThrusterGroup::BACKWARD,
                     },
+                    // Upper pointing to sides
                     Thruster {
-                        offset: Vec3::new(4.0, 0.0, -1.0),
-                        direction: Quat::from_axis_angle(Vec3::Y, 0.0),
+                        offset: Vec3::new(1.0, 1.0, -4.0),
+                        direction: Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
                         thrust: 1.0,
-                        group: ThrusterGroup::LEFT | ThrusterGroup::NYROT,
+                        group: ThrusterGroup::LEFT | ThrusterGroup::YROT | ThrusterGroup::ZROT,
                     },
                     Thruster {
-                        offset: Vec3::new(4.0, 0.0, 1.0),
-                        direction: Quat::from_axis_angle(Vec3::Y, PI),
+                        offset: Vec3::new(1.0, 1.0, 4.0),
+                        direction: Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
                         thrust: 1.0,
-                        group: ThrusterGroup::RIGHT | ThrusterGroup::YROT,
+                        group: ThrusterGroup::LEFT | ThrusterGroup::NYROT | ThrusterGroup::ZROT,
                     },
                     Thruster {
-                        offset: Vec3::new(-4.0, 0.0, -1.0),
-                        direction: Quat::from_axis_angle(Vec3::Y, 0.0),
+                        offset: Vec3::new(-1.0, 1.0, -4.0),
+                        direction: Quat::from_axis_angle(Vec3::Y, PI / 2.0),
                         thrust: 1.0,
-                        group: ThrusterGroup::LEFT | ThrusterGroup::YROT,
+                        group: ThrusterGroup::RIGHT | ThrusterGroup::NYROT | ThrusterGroup::NZROT,
                     },
                     Thruster {
-                        offset: Vec3::new(-4.0, 0.0, 1.0),
-                        direction: Quat::from_axis_angle(Vec3::Y, PI),
+                        offset: Vec3::new(-1.0, 1.0, 4.0),
+                        direction: Quat::from_axis_angle(Vec3::Y, PI / 2.0),
                         thrust: 1.0,
-                        group: ThrusterGroup::RIGHT | ThrusterGroup::NYROT,
+                        group: ThrusterGroup::RIGHT | ThrusterGroup::YROT | ThrusterGroup::NZROT,
+                    },
+                    // Lower pointing to sides
+                    Thruster {
+                        offset: Vec3::new(1.0, -1.0, -4.0),
+                        direction: Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
+                        thrust: 1.0,
+                        group: ThrusterGroup::LEFT | ThrusterGroup::YROT | ThrusterGroup::NZROT,
+                    },
+                    Thruster {
+                        offset: Vec3::new(1.0, -1.0, 4.0),
+                        direction: Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
+                        thrust: 1.0,
+                        group: ThrusterGroup::LEFT | ThrusterGroup::NYROT | ThrusterGroup::NZROT,
+                    },
+                    Thruster {
+                        offset: Vec3::new(-1.0, -1.0, -4.0),
+                        direction: Quat::from_axis_angle(Vec3::Y, PI / 2.0),
+                        thrust: 1.0,
+                        group: ThrusterGroup::RIGHT | ThrusterGroup::NYROT | ThrusterGroup::ZROT,
+                    },
+                    Thruster {
+                        offset: Vec3::new(-1.0, -1.0, 4.0),
+                        direction: Quat::from_axis_angle(Vec3::Y, PI / 2.0),
+                        thrust: 1.0,
+                        group: ThrusterGroup::RIGHT | ThrusterGroup::YROT | ThrusterGroup::ZROT,
+                    },
+                    // Upper pointing up
+                    Thruster {
+                        offset: Vec3::new(1.0, 1.0, -4.0),
+                        direction: Quat::from_axis_angle(Vec3::X, PI / 2.0),
+                        thrust: 1.0,
+                        group: ThrusterGroup::DOWN | ThrusterGroup::NXROT | ThrusterGroup::NZROT,
+                    },
+                    Thruster {
+                        offset: Vec3::new(1.0, 1.0, 4.0),
+                        direction: Quat::from_axis_angle(Vec3::X, PI / 2.0),
+                        thrust: 1.0,
+                        group: ThrusterGroup::DOWN | ThrusterGroup::XROT | ThrusterGroup::NZROT,
+                    },
+                    Thruster {
+                        offset: Vec3::new(-1.0, 1.0, -4.0),
+                        direction: Quat::from_axis_angle(Vec3::X, PI / 2.0),
+                        thrust: 1.0,
+                        group: ThrusterGroup::DOWN | ThrusterGroup::NXROT | ThrusterGroup::ZROT,
+                    },
+                    Thruster {
+                        offset: Vec3::new(-1.0, 1.0, 4.0),
+                        direction: Quat::from_axis_angle(Vec3::X, PI / 2.0),
+                        thrust: 1.0,
+                        group: ThrusterGroup::DOWN | ThrusterGroup::XROT | ThrusterGroup::ZROT,
+                    },
+                    // Lower pointing down
+                    Thruster {
+                        offset: Vec3::new(1.0, -1.0, -4.0),
+                        direction: Quat::from_axis_angle(Vec3::X, -PI / 2.0),
+                        thrust: 1.0,
+                        group: ThrusterGroup::UP | ThrusterGroup::XROT | ThrusterGroup::ZROT,
+                    },
+                    Thruster {
+                        offset: Vec3::new(1.0, -1.0, 4.0),
+                        direction: Quat::from_axis_angle(Vec3::X, -PI / 2.0),
+                        thrust: 1.0,
+                        group: ThrusterGroup::UP | ThrusterGroup::NXROT | ThrusterGroup::ZROT,
+                    },
+                    Thruster {
+                        offset: Vec3::new(-1.0, -1.0, -4.0),
+                        direction: Quat::from_axis_angle(Vec3::X, -PI / 2.0),
+                        thrust: 1.0,
+                        group: ThrusterGroup::UP | ThrusterGroup::XROT | ThrusterGroup::NZROT,
+                    },
+                    Thruster {
+                        offset: Vec3::new(-1.0, -1.0, 4.0),
+                        direction: Quat::from_axis_angle(Vec3::X, -PI / 2.0),
+                        thrust: 1.0,
+                        group: ThrusterGroup::UP | ThrusterGroup::NXROT | ThrusterGroup::NZROT,
                     },
                 ]),
             })
             .insert(PlayerShip)
             .with_children(|p| {
                 p.spawn_scene(asset_server.load("models/space_ship/scene.gltf#Scene0"));
+                p.spawn_bundle(PerspectiveCameraBundle {
+                    transform: Transform::from_translation(Vec3::new(0.0, 1.0, 8.0))
+                        .looking_at(Vec3::default(), Vec3::Y),
+                    ..Default::default()
+                })
+                .insert(FlyCam);
             });
     }
     commands.spawn_bundle(LightBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 5.0, 5.0)),
         ..Default::default()
     });
-
-    commands
-        .spawn_bundle(PerspectiveCameraBundle {
-            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 8.0))
-                .looking_at(Vec3::default(), Vec3::Y),
-            ..Default::default()
-        })
-        .insert(FlyCam);
 }
 
 pub fn setup_physics(mut commands: Commands) {
