@@ -30,8 +30,8 @@ use bevy_rapier3d::{
 };
 use camera::{CameraPlugin, FlyCam, MovementSettings};
 use ship::{
-    debug_thruster, player_thrusters, thrusters, OrientationRegulator, PlayerShip, Thruster,
-    ThrusterGroup, Thrusters,
+    debug_thruster, orientation_regulator, player_thrusters, thrusters, OrientationRegulator,
+    PlayerShip, Thruster, ThrusterGroup, Thrusters,
 };
 
 mod camera;
@@ -51,6 +51,7 @@ fn main() {
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierRenderPlugin)
         .add_plugin(DebugUiPlugin)
+        .add_system(orientation_regulator.system())
         .add_system(player_thrusters.system())
         .add_system(thrusters.system())
         .add_system(ui_example.system())
@@ -224,7 +225,7 @@ fn add_test_objects(
                         group: ThrusterGroup::UP | ThrusterGroup::NXROT | ThrusterGroup::NZROT,
                     },
                 ]),
-                groups_to_fire: ThrusterGroup::NONE,
+                ..Default::default()
             })
             .insert(PlayerShip)
             .insert(OrientationRegulator::default())

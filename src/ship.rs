@@ -39,12 +39,30 @@ pub struct Thruster {
 #[derive(Default)]
 pub struct Thrusters {
     pub thrusters: Vec<Thruster>,
+    pub group_thrust: [f32; 12],
     pub groups_to_fire: ThrusterGroup,
 }
 
 #[derive(Default)]
 pub struct OrientationRegulator {
     target: Quat,
+}
+
+pub fn orientation_regulator(
+    mut query: Query<(&Transform, &mut Thrusters, &OrientationRegulator)>,
+) {
+    let mut groups_to_fire = ThrusterGroup::NONE;
+
+    for (transfrom, mut thrusters, regulator) in query.iter_mut() {
+        let differense = regulator.target * transfrom.rotation.inverse();
+        let differense = differense.to_axis_angle();
+
+        let x_error = differense.0.x * differense.1;
+        let y_error = differense.0.y * differense.1;
+        let z_error = differense.0.z * differense.1;
+
+        println!("{:?}", y_error);
+    }
 }
 
 pub fn player_thrusters(
