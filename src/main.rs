@@ -1,15 +1,14 @@
 use std::f32::consts::PI;
 
 use bevy::{
-    input::Input,
-    math::{DVec3, Quat, Vec3},
-    pbr::{LightBundle, PbrBundle},
+    math::{Quat, Vec3},
+    pbr::LightBundle,
     prelude::{
-        info, App, Assets, BuildChildren, Commands, KeyCode, Mesh, Msaa, PerspectiveCameraBundle,
-        Res, ResMut, SpawnSceneAsChildCommands, SpawnSceneCommands, StandardMaterial, Transform,
+        App, Assets, BuildChildren, Commands, Mesh, Msaa, PerspectiveCameraBundle, Res, ResMut,
+        SpawnSceneAsChildCommands, StandardMaterial, Transform,
     },
     prelude::{
-        shape, AppBuilder, AssetServer, Color, CoreStage, IntoSystem, Plugin, Query, TextBundle,
+        AppBuilder, AssetServer, Color, CoreStage, IntoSystem, Plugin, Query, TextBundle,
         UiCameraBundle,
     },
     text::{Text, TextSection, TextStyle},
@@ -25,7 +24,7 @@ use bevy_rapier3d::{
     physics::{
         ColliderBundle, ColliderPositionSync, NoUserData, RapierPhysicsPlugin, RigidBodyBundle,
     },
-    prelude::{ColliderShape, PhysicsPipeline, RigidBodyForces, RigidBodyVelocity},
+    prelude::{ColliderShape, PhysicsPipeline, RigidBodyForces},
     render::{ColliderDebugRender, RapierRenderPlugin},
 };
 use camera::{CameraPlugin, FlyCam, MovementSettings};
@@ -325,9 +324,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                     font: font_handle,
                     font_size: 15.0,
                     color: Color::BLACK,
-                    ..Default::default()
                 },
-                ..Default::default()
             }],
             ..Default::default()
         },
