@@ -26,6 +26,7 @@ impl Default for MovementSettings {
 }
 
 /// Used in queries when you want flycams and not other cameras
+#[derive(Component)]
 pub struct FlyCam;
 
 /// Grabs/ungrabs mouse cursor
@@ -109,7 +110,7 @@ fn cursor_grab(keys: Res<Input<KeyCode>>, mut windows: ResMut<Windows>) {
 pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.init_resource::<InputState>()
             .init_resource::<MovementSettings>()
             .add_system(player_move.system())

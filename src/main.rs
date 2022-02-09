@@ -2,14 +2,13 @@ use std::f32::consts::PI;
 
 use bevy::{
     math::{Quat, Vec3},
-    pbr::LightBundle,
+    pbr::PointLightBundle,
     prelude::{
         App, Assets, BuildChildren, Commands, Mesh, Msaa, PerspectiveCameraBundle, Res, ResMut,
         SpawnSceneAsChildCommands, StandardMaterial, Transform,
     },
     prelude::{
-        AppBuilder, AssetServer, Color, CoreStage, IntoSystem, Plugin, Query, TextBundle,
-        UiCameraBundle,
+        AssetServer, Color, CoreStage, IntoSystem, Plugin, Query, TextBundle, UiCameraBundle,
     },
     text::{Text, TextSection, TextStyle},
     ui::{AlignSelf, Style},
@@ -19,49 +18,50 @@ use bevy_egui::{
     egui::{self, DragValue},
     EguiContext, EguiPlugin,
 };
-use bevy_prototype_debug_lines::DebugLinesPlugin;
 use bevy_rapier3d::{
     physics::{
         ColliderBundle, ColliderPositionSync, NoUserData, RapierPhysicsPlugin, RigidBodyBundle,
     },
-    prelude::{ColliderShape, PhysicsPipeline, RigidBodyForces},
+    prelude::{
+        ColliderShape, ColliderShapeComponent, PhysicsPipeline, RigidBodyForces,
+        RigidBodyForcesComponent,
+    },
     render::{ColliderDebugRender, RapierRenderPlugin},
 };
 use camera::{CameraPlugin, FlyCam, MovementSettings};
 use ship::{
-    debug_thruster, orientation_regulator, player_thrusters, thrusters, OrientationRegulator,
-    PlayerShip, Thruster, ThrusterGroup, Thrusters,
+    orientation_regulator, player_thrusters, thrusters, OrientationRegulator, PlayerShip, Thruster,
+    ThrusterGroup, Thrusters,
 };
 
 mod camera;
 mod ship;
 
 fn main() {
-    App::build()
+    App::new()
         .insert_resource(Msaa { samples: 4 })
         .insert_resource(MovementSettings {
             sensitivity: 0.000075, // default: 0.00012
             speed: 12.0,           // default: 12.0
         })
         .add_plugins(DefaultPlugins)
-        .add_plugin(DebugLinesPlugin)
         .add_plugin(CameraPlugin)
         .add_plugin(EguiPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierRenderPlugin)
         .add_plugin(DebugUiPlugin)
-        .add_system(orientation_regulator.system())
-        .add_system(player_thrusters.system())
-        .add_system(thrusters.system())
-        .add_system(ui_example.system())
-        .add_system(debug_thruster.system())
-        .add_startup_system(add_test_objects.system())
-        .add_startup_system(setup_physics.system())
+        .add_system(orientation_regulator)
+        .add_system(player_thrusters)
+        .add_system(thrusters)
+        .add_system(ui_example)
+        //.add_system(debug_thruster)
+        .add_startup_system(add_test_objects)
+        .add_startup_system(setup_physics)
         .run();
 }
 
-fn ui_example(egui_context: Res<EguiContext>, mut query: Query<&mut Thrusters>) {
-    egui::Window::new("Hello").show(egui_context.ctx(), |ui| {
+fn ui_example(mut egui_context: ResMut<EguiContext>, mut query: Query<&mut Thrusters>) {
+    egui::Window::new("Hello").show(egui_context.ctx_mut(), |ui| {
         for mut thrusters in query.iter_mut() {
             for thruster in &mut thrusters.thrusters {
                 ui.horizontal(|ui| {
@@ -86,15 +86,15 @@ fn add_test_objects(
 
         let mut rigid_body = RigidBodyBundle {
             position: [0.0, 0.0, 0.0].into(),
-            forces: RigidBodyForces {
+            forces: RigidBodyForcesComponent(RigidBodyForces {
                 gravity_scale: 0.0,
                 ..RigidBodyForces::default()
-            },
+            }),
             ..RigidBodyBundle::default()
         };
 
         let collider = ColliderBundle {
-            shape: ColliderShape::cuboid(1.0, 1.0, 1.0),
+            shape: ColliderShapeComponent(ColliderShape::cuboid(1.0, 1.0, 1.0)),
             ..ColliderBundle::default()
         };
 
@@ -238,7 +238,7 @@ fn add_test_objects(
                 .insert(FlyCam);
             });
     }
-    commands.spawn_bundle(LightBundle {
+    commands.spawn_bundle(PointLightBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 5.0, 5.0)),
         ..Default::default()
     });
@@ -268,17 +268,17 @@ pub fn setup_physics(mut commands: Commands) {
                 // Build the rigid body.
                 let mut rigid_body = RigidBodyBundle {
                     position: [x, y, z].into(),
-                    forces: RigidBodyForces {
+                    forces: RigidBodyForcesComponent(RigidBodyForces {
                         gravity_scale: 0.0,
                         ..RigidBodyForces::default()
-                    },
+                    }),
                     ..RigidBodyBundle::default()
                 };
 
                 rigid_body.mass_properties.local_mprops.set_mass(1.0, true);
 
                 let collider = ColliderBundle {
-                    shape: ColliderShape::cuboid(rad, rad, rad),
+                    shape: ColliderShapeComponent(ColliderShape::cuboid(rad, rad, rad)),
                     ..ColliderBundle::default()
                 };
 
@@ -298,7 +298,7 @@ pub fn setup_physics(mut commands: Commands) {
 pub struct DebugUiPlugin;
 
 impl Plugin for DebugUiPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.add_startup_system(setup_ui.system())
             .add_system_to_stage(CoreStage::Update, text_update_system.system());
     }

@@ -1,10 +1,9 @@
 use bevy::{
     input::Input,
     math::{Quat, Vec3},
-    prelude::{Color, KeyCode, Query, Res, ResMut, Transform},
+    prelude::{Component, KeyCode, Query, Res, Transform},
 };
-use bevy_prototype_debug_lines::DebugLines;
-use bevy_rapier3d::prelude::{RigidBodyForces, RigidBodyMassProps};
+use bevy_rapier3d::prelude::{RigidBodyForcesComponent, RigidBodyMassPropsComponent};
 use bitflags::bitflags;
 
 bitflags! {
@@ -26,6 +25,7 @@ bitflags! {
     }
 }
 
+#[derive(Component)]
 pub struct PlayerShip;
 
 #[derive(Default)]
@@ -36,14 +36,14 @@ pub struct Thruster {
     pub group: ThrusterGroup,
 }
 
-#[derive(Default)]
+#[derive(Component, Default)]
 pub struct Thrusters {
     pub thrusters: Vec<Thruster>,
     pub group_thrust: [f32; 12],
     pub groups_to_fire: ThrusterGroup,
 }
 
-#[derive(Default)]
+#[derive(Component, Default)]
 pub struct OrientationRegulator {
     target: Quat,
 }
@@ -128,10 +128,10 @@ pub fn thrusters(
     mut query: Query<(
         &Transform,
         &mut Thrusters,
-        &RigidBodyMassProps,
-        &mut RigidBodyForces,
+        &RigidBodyMassPropsComponent,
+        &mut RigidBodyForcesComponent,
     )>,
-    mut lines: ResMut<DebugLines>,
+    //mut lines: ResMut<DebugLines>,
 ) {
     for (transform, mut thrusters, rb_mprops, mut forces) in query.iter_mut() {
         for thruster in thrusters
@@ -145,14 +145,14 @@ pub fn thrusters(
 
             forces.apply_force_at_point(rb_mprops, force.into(), pos.into());
 
-            lines.line_colored(pos, pos + 0.2 * force.normalize(), 0.0, Color::RED);
+            //lines.line_colored(pos, pos + 0.2 * force.normalize(), 0.0, Color::RED);
         }
 
         thrusters.groups_to_fire = ThrusterGroup::NONE;
     }
 }
 
-pub fn debug_thruster(query: Query<(&Transform, &Thrusters)>, mut lines: ResMut<DebugLines>) {
+/*pub fn debug_thruster(query: Query<(&Transform, &Thrusters)>, mut lines: ResMut<DebugLines>) {
     for (transform, thrusters) in query.iter() {
         for thruster in &thrusters.thrusters {
             let pos = transform.mul_vec3(thruster.offset);
@@ -172,4 +172,4 @@ pub fn debug_thruster(query: Query<(&Transform, &Thrusters)>, mut lines: ResMut<
             lines.line(pos, pos - 0.1 * local_z, 0.0);
         }
     }
-}
+}*/
