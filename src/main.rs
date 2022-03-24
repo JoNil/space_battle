@@ -37,6 +37,8 @@ use ship::{
 mod camera;
 mod ship;
 
+// Use: https://github.com/sdfgeoff/blender_bevy_toolkit
+
 fn main() {
     App::new()
         .insert_resource(Msaa { samples: 4 })
