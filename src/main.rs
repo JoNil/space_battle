@@ -18,6 +18,7 @@ use bevy_egui::{
     egui::{self, DragValue},
     EguiContext, EguiPlugin,
 };
+use bevy_prototype_debug_lines::DebugLinesPlugin;
 use bevy_rapier3d::{
     physics::{
         ColliderBundle, ColliderPositionSync, NoUserData, RapierPhysicsPlugin, RigidBodyBundle,
@@ -30,8 +31,8 @@ use bevy_rapier3d::{
 };
 use camera::{CameraPlugin, FlyCam, MovementSettings};
 use ship::{
-    orientation_regulator, player_thrusters, thrusters, OrientationRegulator, PlayerShip, Thruster,
-    ThrusterGroup, Thrusters,
+    debug_thruster, orientation_regulator, player_thrusters, thrusters, OrientationRegulator,
+    PlayerShip, Thruster, ThrusterGroup, Thrusters,
 };
 
 mod camera;
@@ -52,11 +53,12 @@ fn main() {
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierRenderPlugin)
         .add_plugin(DebugUiPlugin)
+        .add_plugin(DebugLinesPlugin::default())
         .add_system(orientation_regulator)
         .add_system(player_thrusters)
         .add_system(thrusters)
         .add_system(ui_example)
-        //.add_system(debug_thruster)
+        .add_system(debug_thruster)
         .add_startup_system(add_test_objects)
         .add_startup_system(setup_physics)
         .run();

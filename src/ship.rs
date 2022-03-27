@@ -1,8 +1,9 @@
 use bevy::{
     input::Input,
     math::{Quat, Vec3},
-    prelude::{Component, KeyCode, Query, Res, Transform},
+    prelude::{Component, KeyCode, Query, Res, ResMut, Transform},
 };
+use bevy_prototype_debug_lines::DebugLines;
 use bevy_rapier3d::prelude::{RigidBodyForcesComponent, RigidBodyMassPropsComponent};
 use bitflags::bitflags;
 
@@ -152,7 +153,7 @@ pub fn thrusters(
     }
 }
 
-/*pub fn debug_thruster(query: Query<(&Transform, &Thrusters)>, mut lines: ResMut<DebugLines>) {
+pub fn debug_thruster(query: Query<(&Transform, &Thrusters)>, mut lines: ResMut<DebugLines>) {
     for (transform, thrusters) in query.iter() {
         for thruster in &thrusters.thrusters {
             let pos = transform.mul_vec3(thruster.offset);
@@ -172,4 +173,4 @@ pub fn thrusters(
             lines.line(pos, pos - 0.1 * local_z, 0.0);
         }
     }
-}*/
+}
