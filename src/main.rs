@@ -7,7 +7,7 @@ use bevy::{
     },
     prelude::{
         App, BuildChildren, Camera3dBundle, Commands, ComputedVisibility, Msaa, Res, ResMut,
-        Transform,
+        Transform, Visibility,
     },
     scene::SceneBundle,
     text::{Text, TextSection, TextStyle},
@@ -212,6 +212,7 @@ fn add_test_objects(mut commands: Commands, asset_server: Res<AssetServer>) {
             })
             .insert(PlayerShip)
             .insert(OrientationRegulator::default())
+            .insert(Visibility::default())
             .insert(ComputedVisibility::default())
             .with_children(|p| {
                 p.spawn(SceneBundle {
