@@ -1,16 +1,11 @@
-use std::f32::consts::PI;
-
 use bevy::{
     math::{Quat, Vec3},
     pbr::PointLightBundle,
-    prelude::{
-        App, Assets, BuildChildren, Commands, Mesh, Msaa, PerspectiveCameraBundle, Res, ResMut,
-        SpawnSceneAsChildCommands, StandardMaterial, Transform,
-    },
-    prelude::{
-        AssetServer, Color, CoreStage, IntoSystem, Plugin, Query, TextBundle, UiCameraBundle,
-    },
+    prelude::{App, BuildChildren, Camera3dBundle, Commands, Msaa, Res, ResMut, Transform},
+    prelude::{AssetServer, Color, CoreStage, Plugin, Query, TextBundle},
+    scene::SceneBundle,
     text::{Text, TextSection, TextStyle},
+    transform::TransformBundle,
     ui::{AlignSelf, Style},
     DefaultPlugins,
 };
@@ -20,20 +15,18 @@ use bevy_egui::{
 };
 use bevy_prototype_debug_lines::DebugLinesPlugin;
 use bevy_rapier3d::{
-    physics::{
-        ColliderBundle, ColliderPositionSync, NoUserData, RapierPhysicsPlugin, RigidBodyBundle,
-    },
     prelude::{
-        ColliderShape, ColliderShapeComponent, PhysicsPipeline, RigidBodyForces,
-        RigidBodyForcesComponent,
+        AdditionalMassProperties, Collider, GravityScale, NoUserData, RapierContext,
+        RapierPhysicsPlugin, RigidBody,
     },
-    render::{ColliderDebugRender, RapierRenderPlugin},
+    render::{ColliderDebugColor, RapierDebugRenderPlugin},
 };
 use camera::{CameraPlugin, FlyCam, MovementSettings};
 use ship::{
     debug_thruster, orientation_regulator, player_thrusters, thrusters, OrientationRegulator,
     PlayerShip, Thruster, ThrusterGroup, Thrusters,
 };
+use std::f32::consts::PI;
 
 mod camera;
 mod ship;
@@ -51,7 +44,11 @@ fn main() {
         .add_plugin(CameraPlugin)
         .add_plugin(EguiPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-        .add_plugin(RapierRenderPlugin)
+        .add_plugin(RapierDebugRenderPlugin {
+            always_on_top: true,
+            enabled: true,
+            ..Default::default()
+        })
         .add_plugin(DebugUiPlugin)
         .add_plugin(DebugLinesPlugin::default())
         .add_system(orientation_regulator)
@@ -79,40 +76,16 @@ fn ui_example(mut egui_context: ResMut<EguiContext>, mut query: Query<&mut Thrus
     });
 }
 
-fn add_test_objects(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    asset_server: Res<AssetServer>,
-) {
+fn add_test_objects(mut commands: Commands, asset_server: Res<AssetServer>) {
     {
-        // Spawn player ship
-
-        let mut rigid_body = RigidBodyBundle {
-            position: [0.0, 0.0, 0.0].into(),
-            forces: RigidBodyForcesComponent(RigidBodyForces {
-                gravity_scale: 0.0,
-                ..RigidBodyForces::default()
-            }),
-            ..RigidBodyBundle::default()
-        };
-
-        let collider = ColliderBundle {
-            shape: ColliderShapeComponent(ColliderShape::cuboid(1.0, 1.0, 1.0)),
-            ..ColliderBundle::default()
-        };
-
-        rigid_body
-            .mass_properties
-            .local_mprops
-            .set_mass(100.0, true);
-
         commands
-            .spawn()
-            .insert_bundle(rigid_body)
-            .insert_bundle(collider)
-            .insert(ColliderDebugRender::with_id(0))
-            .insert(ColliderPositionSync::Discrete)
+            .spawn_empty()
+            .insert(TransformBundle::from(Transform::from_xyz(0.0, 0.0, 0.0)))
+            .insert(RigidBody::Dynamic)
+            .insert(GravityScale(0.0))
+            .insert(AdditionalMassProperties::Mass(100.0))
+            .insert(Collider::cuboid(1.0, 1.0, 1.0))
+            .insert(ColliderDebugColor(Color::BLACK))
             .insert(Thrusters {
                 thrusters: Vec::from([
                     Thruster {
@@ -233,8 +206,11 @@ fn add_test_objects(
             .insert(PlayerShip)
             .insert(OrientationRegulator::default())
             .with_children(|p| {
-                p.spawn_scene(asset_server.load("models/space_ship/scene.gltf#Scene0"));
-                p.spawn_bundle(PerspectiveCameraBundle {
+                p.spawn(SceneBundle {
+                    scene: asset_server.load("models/space_ship/scene.gltf#Scene0"),
+                    ..Default::default()
+                });
+                p.spawn(Camera3dBundle {
                     transform: Transform::from_translation(Vec3::new(0.0, 1.0, 8.0))
                         .looking_at(Vec3::default(), Vec3::Y),
                     ..Default::default()
@@ -242,7 +218,7 @@ fn add_test_objects(
                 .insert(FlyCam);
             });
     }
-    commands.spawn_bundle(PointLightBundle {
+    commands.spawn(PointLightBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 5.0, 5.0)),
         ..Default::default()
     });
@@ -269,29 +245,18 @@ pub fn setup_physics(mut commands: Commands) {
                 let z = k as f32 * shift - centerz + offset;
                 color += 1;
 
-                // Build the rigid body.
-                let mut rigid_body = RigidBodyBundle {
-                    position: [x, y, z].into(),
-                    forces: RigidBodyForcesComponent(RigidBodyForces {
-                        gravity_scale: 0.0,
-                        ..RigidBodyForces::default()
-                    }),
-                    ..RigidBodyBundle::default()
-                };
-
-                rigid_body.mass_properties.local_mprops.set_mass(1.0, true);
-
-                let collider = ColliderBundle {
-                    shape: ColliderShapeComponent(ColliderShape::cuboid(rad, rad, rad)),
-                    ..ColliderBundle::default()
-                };
-
                 commands
-                    .spawn()
-                    .insert_bundle(rigid_body)
-                    .insert_bundle(collider)
-                    .insert(ColliderDebugRender::with_id(color))
-                    .insert(ColliderPositionSync::Discrete);
+                    .spawn_empty()
+                    .insert(TransformBundle::from(Transform::from_xyz(x, y, z)))
+                    .insert(RigidBody::Dynamic)
+                    .insert(GravityScale(0.0))
+                    .insert(AdditionalMassProperties::Mass(1.0))
+                    .insert(Collider::cuboid(1.0, 1.0, 1.0))
+                    .insert(ColliderDebugColor(Color::hsl(
+                        color as f32 / (num * num) as f32,
+                        1.0,
+                        1.0,
+                    )));
             }
         }
 
@@ -303,27 +268,23 @@ pub struct DebugUiPlugin;
 
 impl Plugin for DebugUiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(setup_ui.system())
-            .add_system_to_stage(CoreStage::Update, text_update_system.system());
+        app.add_startup_system(setup_ui)
+            .add_system_to_stage(CoreStage::Update, text_update_system);
     }
 }
 
 pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
     let font_handle = asset_server
         .load(format!("{}/assets/FiraSans-Bold.ttf", env!("CARGO_MANIFEST_DIR")).as_str());
-    commands
-        // 2d camera
-        .spawn()
-        .insert_bundle(UiCameraBundle::default());
-    // texture
-    commands.spawn_bundle(TextBundle {
+
+    commands.spawn(TextBundle {
         style: Style {
             align_self: AlignSelf::FlexEnd,
             ..Default::default()
         },
         text: Text {
             sections: vec![TextSection {
-                value: "Physics time0.1234567890".to_string(),
+                value: "Physics time".to_string(),
                 style: TextStyle {
                     font: font_handle,
                     font_size: 15.0,
@@ -336,7 +297,9 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
     });
 }
 
-pub fn text_update_system(pipeline: Res<PhysicsPipeline>, mut query: Query<&mut Text>) {
+pub fn text_update_system(context: Res<RapierContext>, mut query: Query<&mut Text>) {
+    let pipeline = &context.pipeline;
+
     let profile_string = format!(
         r#"Total: {:.2}ms
 Collision detection: {:.2}ms

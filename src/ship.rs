@@ -4,7 +4,7 @@ use bevy::{
     prelude::{Component, KeyCode, Query, Res, ResMut, Transform},
 };
 use bevy_prototype_debug_lines::DebugLines;
-use bevy_rapier3d::prelude::{RigidBodyForcesComponent, RigidBodyMassPropsComponent};
+use bevy_rapier3d::prelude::{ExternalForce, ReadMassProperties};
 use bitflags::bitflags;
 
 bitflags! {
@@ -52,9 +52,9 @@ pub struct OrientationRegulator {
 pub fn orientation_regulator(
     mut query: Query<(&Transform, &mut Thrusters, &OrientationRegulator)>,
 ) {
-    let mut groups_to_fire = ThrusterGroup::NONE;
+    let groups_to_fire = ThrusterGroup::NONE;
 
-    for (transfrom, mut thrusters, regulator) in query.iter_mut() {
+    for (transfrom, thrusters, regulator) in query.iter_mut() {
         let differense = regulator.target * transfrom.rotation.inverse();
         let differense = differense.to_axis_angle();
 
@@ -62,7 +62,7 @@ pub fn orientation_regulator(
         let y_error = differense.0.y * differense.1;
         let z_error = differense.0.z * differense.1;
 
-        println!("{:?}", y_error);
+        //println!("{:?}", y_error);
     }
 }
 
@@ -129,22 +129,22 @@ pub fn thrusters(
     mut query: Query<(
         &Transform,
         &mut Thrusters,
-        &RigidBodyMassPropsComponent,
-        &mut RigidBodyForcesComponent,
+        &mut ExternalForce,
+        &ReadMassProperties,
     )>,
     //mut lines: ResMut<DebugLines>,
 ) {
-    for (transform, mut thrusters, rb_mprops, mut forces) in query.iter_mut() {
+    for (transform, mut thrusters, mut forces, mass_props) in query.iter_mut() {
         for thruster in thrusters
             .thrusters
             .iter()
             .filter(|thruster| thruster.group.intersects(thrusters.groups_to_fire))
         {
-            let pos = transform.mul_vec3(thruster.offset);
+            let pos = transform.transform_point(thruster.offset);
             let force =
                 thruster.thrust * -(transform.rotation * thruster.direction).mul_vec3(-Vec3::Z);
 
-            forces.apply_force_at_point(rb_mprops, force.into(), pos.into());
+            *forces = ExternalForce::at_point(force, pos, mass_props.0.local_center_of_mass);
 
             //lines.line_colored(pos, pos + 0.2 * force.normalize(), 0.0, Color::RED);
         }
@@ -156,9 +156,9 @@ pub fn thrusters(
 pub fn debug_thruster(query: Query<(&Transform, &Thrusters)>, mut lines: ResMut<DebugLines>) {
     for (transform, thrusters) in query.iter() {
         for thruster in &thrusters.thrusters {
-            let pos = transform.mul_vec3(thruster.offset);
-            let orientaion = (transform.rotation * thruster.direction).mul_vec3(-Vec3::Z);
-            let end = pos + 0.3 * orientaion;
+            let pos = transform.transform_point(thruster.offset);
+            let orientation = (transform.rotation * thruster.direction).mul_vec3(-Vec3::Z);
+            let end = pos + 0.3 * orientation;
             lines.line(pos, end, 0.0);
 
             let local_x = transform.rotation * Vec3::X;

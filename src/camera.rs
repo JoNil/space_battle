@@ -1,16 +1,22 @@
-use bevy::app::{Events, ManualEventReader};
-use bevy::input::mouse::MouseMotion;
-use bevy::prelude::*;
+use bevy::{
+    ecs::event::ManualEventReader,
+    input::mouse::MouseMotion,
+    prelude::{
+        App, Component, Events, Input, KeyCode, Plugin, Quat, Query, Res, ResMut, Resource,
+        Transform, Vec3,
+    },
+    time::Time,
+    window::{CursorGrabMode, Window, Windows},
+};
 
-/// Keeps track of mouse motion events, pitch, and yaw
-#[derive(Default)]
+#[derive(Default, Resource)]
 struct InputState {
     reader_motion: ManualEventReader<MouseMotion>,
     pitch: f32,
     yaw: f32,
 }
 
-/// Mouse sensitivity and movement speed
+#[derive(Resource)]
 pub struct MovementSettings {
     pub sensitivity: f32,
     pub speed: f32,
@@ -25,17 +31,18 @@ impl Default for MovementSettings {
     }
 }
 
-/// Used in queries when you want flycams and not other cameras
 #[derive(Component)]
 pub struct FlyCam;
 
-/// Grabs/ungrabs mouse cursor
 fn toggle_grab_cursor(window: &mut Window) {
-    window.set_cursor_lock_mode(!window.cursor_locked());
+    if window.cursor_grab_mode() == CursorGrabMode::None {
+        window.set_cursor_grab_mode(CursorGrabMode::Locked);
+    } else {
+        window.set_cursor_grab_mode(CursorGrabMode::None);
+    }
     window.set_cursor_visibility(!window.cursor_visible());
 }
 
-/// Handles keyboard input and movement
 fn player_move(
     keys: Res<Input<KeyCode>>,
     time: Res<Time>,
@@ -51,7 +58,7 @@ fn player_move(
         let right = Vec3::new(local_z.z, 0., -local_z.x);
 
         for key in keys.get_pressed() {
-            if window.cursor_locked() {
+            if window.cursor_grab_mode() == CursorGrabMode::Locked {
                 match key {
                     KeyCode::W => velocity += forward,
                     KeyCode::S => velocity -= forward,
@@ -72,7 +79,6 @@ fn player_move(
     }
 }
 
-/// Handles looking around if cursor is locked
 fn player_look(
     settings: Res<MovementSettings>,
     windows: Res<Windows>,
@@ -81,9 +87,11 @@ fn player_look(
     mut query: Query<(&FlyCam, &mut Transform)>,
 ) {
     let window = windows.get_primary().unwrap();
+    let state = &mut *state;
+
     for (_camera, mut transform) in query.iter_mut() {
         for ev in state.reader_motion.iter(&motion) {
-            if window.cursor_locked() {
+            if window.cursor_grab_mode() == CursorGrabMode::Locked {
                 // Using smallest of height or width ensures equal vertical and horizontal sensitivity
                 let window_scale = window.height().min(window.width());
 
@@ -113,8 +121,8 @@ impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<InputState>()
             .init_resource::<MovementSettings>()
-            .add_system(player_move.system())
-            .add_system(player_look.system())
-            .add_system(cursor_grab.system());
+            .add_system(player_move)
+            .add_system(player_look)
+            .add_system(cursor_grab);
     }
 }
