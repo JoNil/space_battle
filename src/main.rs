@@ -1,8 +1,14 @@
 use bevy::{
     math::{Quat, Vec3},
     pbr::PointLightBundle,
-    prelude::{App, BuildChildren, Camera3dBundle, Commands, Msaa, Res, ResMut, Transform},
-    prelude::{AssetServer, Color, CoreStage, Plugin, Query, TextBundle},
+    prelude::{
+        shape, AssetServer, Assets, Color, CoreStage, Mesh, PbrBundle, Plugin, Query,
+        StandardMaterial, TextBundle,
+    },
+    prelude::{
+        App, BuildChildren, Camera3dBundle, Commands, ComputedVisibility, Msaa, Res, ResMut,
+        Transform,
+    },
     scene::SceneBundle,
     text::{Text, TextSection, TextStyle},
     transform::TransformBundle,
@@ -16,10 +22,10 @@ use bevy_egui::{
 use bevy_prototype_debug_lines::DebugLinesPlugin;
 use bevy_rapier3d::{
     prelude::{
-        AdditionalMassProperties, Collider, GravityScale, NoUserData, RapierContext,
-        RapierPhysicsPlugin, RigidBody,
+        AdditionalMassProperties, Collider, ExternalForce, GravityScale, NoUserData, RapierContext,
+        RapierPhysicsPlugin, ReadMassProperties, RigidBody,
     },
-    render::{ColliderDebugColor, RapierDebugRenderPlugin},
+    render::RapierDebugRenderPlugin,
 };
 use camera::{CameraPlugin, FlyCam, MovementSettings};
 use ship::{
@@ -45,7 +51,7 @@ fn main() {
         .add_plugin(EguiPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierDebugRenderPlugin {
-            always_on_top: true,
+            always_on_top: false,
             enabled: true,
             ..Default::default()
         })
@@ -84,8 +90,9 @@ fn add_test_objects(mut commands: Commands, asset_server: Res<AssetServer>) {
             .insert(RigidBody::Dynamic)
             .insert(GravityScale(0.0))
             .insert(AdditionalMassProperties::Mass(100.0))
+            .insert(ReadMassProperties::default())
+            .insert(ExternalForce::default())
             .insert(Collider::cuboid(1.0, 1.0, 1.0))
-            .insert(ColliderDebugColor(Color::BLACK))
             .insert(Thrusters {
                 thrusters: Vec::from([
                     Thruster {
@@ -205,6 +212,7 @@ fn add_test_objects(mut commands: Commands, asset_server: Res<AssetServer>) {
             })
             .insert(PlayerShip)
             .insert(OrientationRegulator::default())
+            .insert(ComputedVisibility::default())
             .with_children(|p| {
                 p.spawn(SceneBundle {
                     scene: asset_server.load("models/space_ship/scene.gltf#Scene0"),
@@ -224,8 +232,13 @@ fn add_test_objects(mut commands: Commands, asset_server: Res<AssetServer>) {
     });
 }
 
-pub fn setup_physics(mut commands: Commands) {
-    // Create the cubes
+pub fn setup_physics(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let mesh = meshes.add(Mesh::from(shape::Box::new(2.0, 2.0, 2.0)));
+
     let num = 8;
     let rad = 1.0;
 
@@ -237,9 +250,9 @@ pub fn setup_physics(mut commands: Commands) {
     let mut offset = -(num as f32) * (rad * 2.0 + rad) * 0.5;
     let mut color = 0;
 
-    for j in 0usize..20 {
+    for j in 0..8 {
         for i in 0..num {
-            for k in 0usize..num {
+            for k in 0..num {
                 let x = i as f32 * shift - centerx + offset;
                 let y = j as f32 * shift + centery - 15.0;
                 let z = k as f32 * shift - centerz + offset;
@@ -247,16 +260,25 @@ pub fn setup_physics(mut commands: Commands) {
 
                 commands
                     .spawn_empty()
-                    .insert(TransformBundle::from(Transform::from_xyz(x, y, z)))
+                    .insert(PbrBundle {
+                        mesh: mesh.clone(),
+                        material: materials.add(StandardMaterial {
+                            base_color: Color::hsl(
+                                color as f32 / (num * num * num) as f32 * 360.0,
+                                1.0,
+                                0.75,
+                            ),
+                            metallic: 0.5,
+                            perceptual_roughness: 0.5,
+                            ..Default::default()
+                        }),
+                        transform: Transform::from_xyz(x, y, z),
+                        ..Default::default()
+                    })
                     .insert(RigidBody::Dynamic)
                     .insert(GravityScale(0.0))
                     .insert(AdditionalMassProperties::Mass(1.0))
-                    .insert(Collider::cuboid(1.0, 1.0, 1.0))
-                    .insert(ColliderDebugColor(Color::hsl(
-                        color as f32 / (num * num) as f32,
-                        1.0,
-                        1.0,
-                    )));
+                    .insert(Collider::cuboid(1.0, 1.0, 1.0));
             }
         }
 

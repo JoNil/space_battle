@@ -2877,6 +2877,7 @@ dependencies = [
  "bitflags",
  "crossbeam",
  "downcast-rs",
+ "instant",
  "nalgebra",
  "num-derive",
  "num-traits",
@@ -3195,6 +3196,7 @@ dependencies = [
  "bevy_prototype_debug_lines",
  "bevy_rapier3d",
  "bitflags",
+ "rapier3d",
 ]
 
 [[package]]

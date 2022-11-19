@@ -10,4 +10,5 @@ bevy = { version = "0.9", features = ["jpeg"] }
 bevy_egui = "0.17"
 bevy_prototype_debug_lines = { version = "0.9", features = ["3d"] }
 bevy_rapier3d = { version = "0.19", features = ["parallel", "simd-stable"] }
+rapier3d = { version = "0.16", features = ["profiler"] }
 bitflags = "1"

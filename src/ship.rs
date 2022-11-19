@@ -1,7 +1,7 @@
 use bevy::{
     input::Input,
     math::{Quat, Vec3},
-    prelude::{Component, KeyCode, Query, Res, ResMut, Transform},
+    prelude::{Color, Component, KeyCode, Query, Res, ResMut, Transform},
 };
 use bevy_prototype_debug_lines::DebugLines;
 use bevy_rapier3d::prelude::{ExternalForce, ReadMassProperties};
@@ -132,21 +132,24 @@ pub fn thrusters(
         &mut ExternalForce,
         &ReadMassProperties,
     )>,
-    //mut lines: ResMut<DebugLines>,
+    mut lines: ResMut<DebugLines>,
 ) {
     for (transform, mut thrusters, mut forces, mass_props) in query.iter_mut() {
+        *forces = ExternalForce::default();
+
         for thruster in thrusters
             .thrusters
             .iter()
             .filter(|thruster| thruster.group.intersects(thrusters.groups_to_fire))
         {
             let pos = transform.transform_point(thruster.offset);
+            let center_of_mass = transform.transform_point(mass_props.0.local_center_of_mass);
             let force =
                 thruster.thrust * -(transform.rotation * thruster.direction).mul_vec3(-Vec3::Z);
 
-            *forces = ExternalForce::at_point(force, pos, mass_props.0.local_center_of_mass);
+            *forces = ExternalForce::at_point(force, pos, center_of_mass);
 
-            //lines.line_colored(pos, pos + 0.2 * force.normalize(), 0.0, Color::RED);
+            lines.line_colored(pos, pos + 0.2 * force.normalize(), 0.0, Color::RED);
         }
 
         thrusters.groups_to_fire = ThrusterGroup::NONE;
