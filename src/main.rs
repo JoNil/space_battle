@@ -1,73 +1,59 @@
 use bevy::{
+    diagnostic::FrameTimeDiagnosticsPlugin,
     math::{Quat, Vec3},
     pbr::PointLightBundle,
+    prelude::{shape, AssetServer, Assets, Color, Mesh, PbrBundle, StandardMaterial},
     prelude::{
-        shape, AssetServer, Assets, Color, Mesh, PbrBundle, Plugin, Query, StandardMaterial,
-        TextBundle,
-    },
-    prelude::{
-        App, BuildChildren, Camera3dBundle, Commands, ComputedVisibility, CoreSet,
-        IntoSystemConfig, Msaa, Res, ResMut, StartupSet, Transform, Visibility,
+        App, BuildChildren, Camera3dBundle, Commands, ComputedVisibility, Msaa, Res, ResMut,
+        Transform, Visibility,
     },
     scene::SceneBundle,
-    text::{Text, TextSection, TextStyle},
     transform::TransformBundle,
-    ui::{AlignSelf, Style},
     DefaultPlugins,
 };
-use bevy_egui::{
-    egui::{self, DragValue},
-    EguiContexts, EguiPlugin,
-};
+use bevy_editor_pls::{AddEditorWindow, EditorPlugin};
 use bevy_prototype_debug_lines::DebugLinesPlugin;
 use bevy_rapier3d::{
     prelude::{
-        AdditionalMassProperties, Collider, ExternalForce, GravityScale, NoUserData, RapierContext,
+        AdditionalMassProperties, Collider, ExternalForce, GravityScale, NoUserData,
         RapierPhysicsPlugin, ReadMassProperties, RigidBody,
     },
     render::RapierDebugRenderPlugin,
 };
-use camera::{CameraPlugin, FlyCam, MovementSettings};
 use ship::{
     debug_thruster, orientation_regulator, player_thrusters, thrusters, OrientationRegulator,
     PlayerShip, Thruster, ThrusterGroup, Thrusters,
 };
 use std::f32::consts::PI;
+use ui::physics_debug_panel::PhysicsProfilingPanel;
 
-mod camera;
 mod ship;
-
-// Use: https://github.com/sdfgeoff/blender_bevy_toolkit
+mod ui;
 
 fn main() {
     App::new()
         .insert_resource(Msaa::Sample4)
-        .insert_resource(MovementSettings {
-            sensitivity: 0.000075, // default: 0.00012
-            speed: 12.0,           // default: 12.0
-        })
         .add_plugins(DefaultPlugins)
-        .add_plugin(CameraPlugin)
-        .add_plugin(EguiPlugin)
+        .add_plugin(EditorPlugin)
+        .add_plugin(FrameTimeDiagnosticsPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierDebugRenderPlugin {
             always_on_top: false,
             enabled: true,
             ..Default::default()
         })
-        .add_plugin(DebugUiPlugin)
         .add_plugin(DebugLinesPlugin::default())
         .add_system(orientation_regulator)
         .add_system(player_thrusters)
         .add_system(thrusters)
-        .add_system(ui_example)
         .add_system(debug_thruster)
         .add_startup_system(add_test_objects)
         .add_startup_system(setup_physics)
+        .add_editor_window::<PhysicsProfilingPanel>()
         .run();
 }
 
-fn ui_example(mut contexts: EguiContexts, mut query: Query<&mut Thrusters>) {
+/*fn ui_example(mut contexts: EguiContexts, mut query: Query<&mut Thrusters>) {
     egui::Window::new("Hello").show(contexts.ctx_mut(), |ui| {
         for mut thrusters in query.iter_mut() {
             for thruster in &mut thrusters.thrusters {
@@ -80,7 +66,7 @@ fn ui_example(mut contexts: EguiContexts, mut query: Query<&mut Thrusters>) {
             }
         }
     });
-}
+}*/
 
 fn add_test_objects(mut commands: Commands, asset_server: Res<AssetServer>) {
     {
@@ -223,8 +209,7 @@ fn add_test_objects(mut commands: Commands, asset_server: Res<AssetServer>) {
                     transform: Transform::from_translation(Vec3::new(0.0, 1.0, 8.0))
                         .looking_at(Vec3::default(), Vec3::Y),
                     ..Default::default()
-                })
-                .insert(FlyCam);
+                });
             });
     }
     commands.spawn(PointLightBundle {
@@ -284,83 +269,5 @@ pub fn setup_physics(
         }
 
         offset -= 0.05 * rad * (num as f32 - 1.0);
-    }
-}
-
-pub struct DebugUiPlugin;
-
-impl Plugin for DebugUiPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_startup_system(setup_ui.in_base_set(StartupSet::PostStartup))
-            .add_system(text_update_system.in_base_set(CoreSet::PostUpdate));
-    }
-}
-
-pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let font_handle = asset_server
-        .load(format!("{}/assets/FiraSans-Bold.ttf", env!("CARGO_MANIFEST_DIR")).as_str());
-
-    commands.spawn(TextBundle {
-        style: Style {
-            align_self: AlignSelf::FlexEnd,
-            ..Default::default()
-        },
-        text: Text {
-            sections: vec![TextSection {
-                value: "Physics time".to_string(),
-                style: TextStyle {
-                    font: font_handle,
-                    font_size: 15.0,
-                    color: Color::BLACK,
-                },
-            }],
-            ..Default::default()
-        },
-        ..Default::default()
-    });
-}
-
-pub fn text_update_system(context: Res<RapierContext>, mut query: Query<&mut Text>) {
-    let pipeline = &context.pipeline;
-
-    let profile_string = format!(
-        r#"Total: {:.2}ms
-Collision detection: {:.2}ms
-|_ Broad-phase: {:.2}ms
-   Narrow-phase: {:.2}ms
-Island computation: {:.2}ms
-Solver: {:.2}ms
-|_ Velocity assembly: {:.2}ms
-   Velocity resolution: {:.2}ms
-   Velocity integration: {:.2}ms
-   Position assembly: {:.2}ms
-   Position resolution: {:.2}ms
-CCD: {:.2}ms
-|_ # of substeps: {}
-   TOI computation: {:.2}ms
-   Broad-phase: {:.2}ms
-   Narrow-phase: {:.2}ms
-   Solver: {:.2}ms"#,
-        pipeline.counters.step_time(),
-        pipeline.counters.collision_detection_time(),
-        pipeline.counters.broad_phase_time(),
-        pipeline.counters.narrow_phase_time(),
-        pipeline.counters.island_construction_time(),
-        pipeline.counters.solver_time(),
-        pipeline.counters.solver.velocity_assembly_time.time(),
-        pipeline.counters.velocity_resolution_time(),
-        pipeline.counters.solver.velocity_update_time.time(),
-        pipeline.counters.solver.position_assembly_time.time(),
-        pipeline.counters.position_resolution_time(),
-        pipeline.counters.ccd_time(),
-        pipeline.counters.ccd.num_substeps,
-        pipeline.counters.ccd.toi_computation_time.time(),
-        pipeline.counters.ccd.broad_phase_time.time(),
-        pipeline.counters.ccd.narrow_phase_time.time(),
-        pipeline.counters.ccd.solver_time.time(),
-    );
-
-    for mut text in query.iter_mut() {
-        text.sections[0].value = profile_string.clone();
     }
 }

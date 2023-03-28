@@ -1,35 +1,55 @@
+use std::ops::{BitOr, BitOrAssign};
+
 use bevy::{
     input::Input,
     math::{Quat, Vec3},
     prelude::{Color, Component, KeyCode, Query, Res, ResMut, Transform},
+    reflect::Reflect,
 };
 use bevy_prototype_debug_lines::DebugLines;
 use bevy_rapier3d::prelude::{ExternalForce, ReadMassProperties};
-use bitflags::bitflags;
 
-bitflags! {
-    #[derive(Copy, Clone, Default)]
-    pub struct ThrusterGroup: u32 {
-        const NONE     = 0b0000_0000_0000;
-        const FORWARD  = 0b0000_0000_0001;
-        const BACKWARD = 0b0000_0000_0010;
-        const LEFT     = 0b0000_0000_0100;
-        const RIGHT    = 0b0000_0000_1000;
-        const UP       = 0b0000_0001_0000;
-        const DOWN     = 0b0000_0010_0000;
-        const XROT     = 0b0000_0100_0000;
-        const NXROT    = 0b0000_1000_0000;
-        const YROT     = 0b0001_0000_0000;
-        const NYROT    = 0b0010_0000_0000;
-        const ZROT     = 0b0100_0000_0000;
-        const NZROT    = 0b1000_0000_0000;
+#[derive(Copy, Clone, Default, Reflect)]
+pub struct ThrusterGroup(u32);
+
+impl ThrusterGroup {
+    pub const NONE: ThrusterGroup = ThrusterGroup(1 << 0);
+    pub const FORWARD: ThrusterGroup = ThrusterGroup(1 << 1);
+    pub const BACKWARD: ThrusterGroup = ThrusterGroup(1 << 2);
+    pub const LEFT: ThrusterGroup = ThrusterGroup(1 << 3);
+    pub const RIGHT: ThrusterGroup = ThrusterGroup(1 << 4);
+    pub const UP: ThrusterGroup = ThrusterGroup(1 << 5);
+    pub const DOWN: ThrusterGroup = ThrusterGroup(1 << 6);
+    pub const XROT: ThrusterGroup = ThrusterGroup(1 << 7);
+    pub const NXROT: ThrusterGroup = ThrusterGroup(1 << 8);
+    pub const YROT: ThrusterGroup = ThrusterGroup(1 << 9);
+    pub const NYROT: ThrusterGroup = ThrusterGroup(1 << 10);
+    pub const ZROT: ThrusterGroup = ThrusterGroup(1 << 11);
+    pub const NZROT: ThrusterGroup = ThrusterGroup(1 << 12);
+
+    fn intersects(self, other: ThrusterGroup) -> bool {
+        (self.0 & other.0) != 0
+    }
+}
+
+impl BitOrAssign for ThrusterGroup {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0;
+    }
+}
+
+impl BitOr for ThrusterGroup {
+    type Output = ThrusterGroup;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        ThrusterGroup(self.0 | rhs.0)
     }
 }
 
 #[derive(Component)]
 pub struct PlayerShip;
 
-#[derive(Default)]
+#[derive(Default, Reflect)]
 pub struct Thruster {
     pub offset: Vec3,
     pub direction: Quat,
@@ -37,14 +57,15 @@ pub struct Thruster {
     pub group: ThrusterGroup,
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Default, Reflect)]
 pub struct Thrusters {
+    #[reflect(ignore)]
     pub thrusters: Vec<Thruster>,
     pub group_thrust: [f32; 12],
     pub groups_to_fire: ThrusterGroup,
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Default, Reflect)]
 pub struct OrientationRegulator {
     target: Quat,
 }
