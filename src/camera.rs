@@ -3,10 +3,10 @@ use bevy::{
     input::mouse::MouseMotion,
     prelude::{
         App, Component, Events, Input, KeyCode, Plugin, Quat, Query, Res, ResMut, Resource,
-        Transform, Vec3,
+        Transform, Vec3, With,
     },
     time::Time,
-    window::{CursorGrabMode, Window, Windows},
+    window::{CursorGrabMode, PrimaryWindow, Window},
 };
 
 #[derive(Default, Resource)]
@@ -35,83 +35,89 @@ impl Default for MovementSettings {
 pub struct FlyCam;
 
 fn toggle_grab_cursor(window: &mut Window) {
-    if window.cursor_grab_mode() == CursorGrabMode::None {
-        window.set_cursor_grab_mode(CursorGrabMode::Locked);
+    if window.cursor.grab_mode == CursorGrabMode::None {
+        window.cursor.grab_mode = CursorGrabMode::Locked;
     } else {
-        window.set_cursor_grab_mode(CursorGrabMode::None);
+        window.cursor.grab_mode = CursorGrabMode::None;
     }
-    window.set_cursor_visibility(!window.cursor_visible());
+    window.cursor.visible = !window.cursor.visible;
 }
 
 fn player_move(
     keys: Res<Input<KeyCode>>,
     time: Res<Time>,
-    windows: Res<Windows>,
     settings: Res<MovementSettings>,
     mut query: Query<(&FlyCam, &mut Transform)>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
 ) {
-    let window = windows.get_primary().unwrap();
-    for (_camera, mut transform) in query.iter_mut() {
-        let mut velocity = Vec3::ZERO;
-        let local_z = transform.local_z();
-        let forward = -Vec3::new(local_z.x, 0., local_z.z);
-        let right = Vec3::new(local_z.z, 0., -local_z.x);
+    if let Ok(window) = window_query.get_single() {
+        for (_camera, mut transform) in query.iter_mut() {
+            let mut velocity = Vec3::ZERO;
+            let local_z = transform.local_z();
+            let forward = -Vec3::new(local_z.x, 0., local_z.z);
+            let right = Vec3::new(local_z.z, 0., -local_z.x);
 
-        for key in keys.get_pressed() {
-            if window.cursor_grab_mode() == CursorGrabMode::Locked {
-                match key {
-                    KeyCode::W => velocity += forward,
-                    KeyCode::S => velocity -= forward,
-                    KeyCode::A => velocity -= right,
-                    KeyCode::D => velocity += right,
-                    KeyCode::Space => velocity += Vec3::Y,
-                    KeyCode::LShift => velocity -= Vec3::Y,
-                    _ => (),
+            for key in keys.get_pressed() {
+                if window.cursor.grab_mode == CursorGrabMode::Locked {
+                    match key {
+                        KeyCode::W => velocity += forward,
+                        KeyCode::S => velocity -= forward,
+                        KeyCode::A => velocity -= right,
+                        KeyCode::D => velocity += right,
+                        KeyCode::Space => velocity += Vec3::Y,
+                        KeyCode::LShift => velocity -= Vec3::Y,
+                        _ => (),
+                    }
                 }
             }
-        }
 
-        velocity = velocity.normalize();
+            velocity = velocity.normalize();
 
-        if !velocity.is_nan() {
-            transform.translation += velocity * time.delta_seconds() * settings.speed
+            if !velocity.is_nan() {
+                transform.translation += velocity * time.delta_seconds() * settings.speed
+            }
         }
     }
 }
 
 fn player_look(
     settings: Res<MovementSettings>,
-    windows: Res<Windows>,
     mut state: ResMut<InputState>,
     motion: Res<Events<MouseMotion>>,
     mut query: Query<(&FlyCam, &mut Transform)>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
 ) {
-    let window = windows.get_primary().unwrap();
     let state = &mut *state;
 
-    for (_camera, mut transform) in query.iter_mut() {
-        for ev in state.reader_motion.iter(&motion) {
-            if window.cursor_grab_mode() == CursorGrabMode::Locked {
-                // Using smallest of height or width ensures equal vertical and horizontal sensitivity
-                let window_scale = window.height().min(window.width());
+    if let Ok(window) = window_query.get_single() {
+        for (_camera, mut transform) in query.iter_mut() {
+            for ev in state.reader_motion.iter(&motion) {
+                if window.cursor.grab_mode == CursorGrabMode::Locked {
+                    // Using smallest of height or width ensures equal vertical and horizontal sensitivity
+                    let window_scale = window.height().min(window.width());
 
-                state.pitch -= (settings.sensitivity * ev.delta.y * window_scale).to_radians();
-                state.yaw -= (settings.sensitivity * ev.delta.x * window_scale).to_radians();
+                    state.pitch -= (settings.sensitivity * ev.delta.y * window_scale).to_radians();
+                    state.yaw -= (settings.sensitivity * ev.delta.x * window_scale).to_radians();
+                }
+
+                state.pitch = state.pitch.clamp(-1.54, 1.54);
+
+                // Order is important to prevent unintended roll
+                transform.rotation = Quat::from_axis_angle(Vec3::Y, state.yaw)
+                    * Quat::from_axis_angle(Vec3::X, state.pitch);
             }
-
-            state.pitch = state.pitch.clamp(-1.54, 1.54);
-
-            // Order is important to prevent unintended roll
-            transform.rotation = Quat::from_axis_angle(Vec3::Y, state.yaw)
-                * Quat::from_axis_angle(Vec3::X, state.pitch);
         }
     }
 }
 
-fn cursor_grab(keys: Res<Input<KeyCode>>, mut windows: ResMut<Windows>) {
-    let window = windows.get_primary_mut().unwrap();
-    if keys.just_pressed(KeyCode::Escape) {
-        toggle_grab_cursor(window);
+fn cursor_grab(
+    keys: Res<Input<KeyCode>>,
+    mut window_query: Query<&mut Window, With<PrimaryWindow>>,
+) {
+    if let Ok(mut window) = window_query.get_single_mut() {
+        if keys.just_pressed(KeyCode::Escape) {
+            toggle_grab_cursor(window.as_mut());
+        }
     }
 }
 

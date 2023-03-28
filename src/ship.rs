@@ -8,7 +8,7 @@ use bevy_rapier3d::prelude::{ExternalForce, ReadMassProperties};
 use bitflags::bitflags;
 
 bitflags! {
-    #[derive(Default)]
+    #[derive(Copy, Clone, Default)]
     pub struct ThrusterGroup: u32 {
         const NONE     = 0b0000_0000_0000;
         const FORWARD  = 0b0000_0000_0001;

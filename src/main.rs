@@ -2,12 +2,12 @@ use bevy::{
     math::{Quat, Vec3},
     pbr::PointLightBundle,
     prelude::{
-        shape, AssetServer, Assets, Color, CoreStage, Mesh, PbrBundle, Plugin, Query,
-        StandardMaterial, TextBundle,
+        shape, AssetServer, Assets, Color, Mesh, PbrBundle, Plugin, Query, StandardMaterial,
+        TextBundle,
     },
     prelude::{
-        App, BuildChildren, Camera3dBundle, Commands, ComputedVisibility, Msaa, Res, ResMut,
-        Transform, Visibility,
+        App, BuildChildren, Camera3dBundle, Commands, ComputedVisibility, CoreSet,
+        IntoSystemConfig, Msaa, Res, ResMut, StartupSet, Transform, Visibility,
     },
     scene::SceneBundle,
     text::{Text, TextSection, TextStyle},
@@ -17,7 +17,7 @@ use bevy::{
 };
 use bevy_egui::{
     egui::{self, DragValue},
-    EguiContext, EguiPlugin,
+    EguiContexts, EguiPlugin,
 };
 use bevy_prototype_debug_lines::DebugLinesPlugin;
 use bevy_rapier3d::{
@@ -41,7 +41,7 @@ mod ship;
 
 fn main() {
     App::new()
-        .insert_resource(Msaa { samples: 4 })
+        .insert_resource(Msaa::Sample4)
         .insert_resource(MovementSettings {
             sensitivity: 0.000075, // default: 0.00012
             speed: 12.0,           // default: 12.0
@@ -67,8 +67,8 @@ fn main() {
         .run();
 }
 
-fn ui_example(mut egui_context: ResMut<EguiContext>, mut query: Query<&mut Thrusters>) {
-    egui::Window::new("Hello").show(egui_context.ctx_mut(), |ui| {
+fn ui_example(mut contexts: EguiContexts, mut query: Query<&mut Thrusters>) {
+    egui::Window::new("Hello").show(contexts.ctx_mut(), |ui| {
         for mut thrusters in query.iter_mut() {
             for thruster in &mut thrusters.thrusters {
                 ui.horizontal(|ui| {
@@ -291,8 +291,8 @@ pub struct DebugUiPlugin;
 
 impl Plugin for DebugUiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(setup_ui)
-            .add_system_to_stage(CoreStage::Update, text_update_system);
+        app.add_startup_system(setup_ui.in_base_set(StartupSet::PostStartup))
+            .add_system(text_update_system.in_base_set(CoreSet::PostUpdate));
     }
 }
 
