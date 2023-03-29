@@ -14,22 +14,27 @@ use std::ops::{BitOr, BitOrAssign};
 pub struct ThrusterGroup(u32);
 
 impl ThrusterGroup {
-    pub const NONE: ThrusterGroup = ThrusterGroup(1 << 0);
-    pub const FORWARD: ThrusterGroup = ThrusterGroup(1 << 1);
-    pub const BACKWARD: ThrusterGroup = ThrusterGroup(1 << 2);
-    pub const LEFT: ThrusterGroup = ThrusterGroup(1 << 3);
-    pub const RIGHT: ThrusterGroup = ThrusterGroup(1 << 4);
-    pub const UP: ThrusterGroup = ThrusterGroup(1 << 5);
-    pub const DOWN: ThrusterGroup = ThrusterGroup(1 << 6);
-    pub const XROT: ThrusterGroup = ThrusterGroup(1 << 7);
-    pub const NXROT: ThrusterGroup = ThrusterGroup(1 << 8);
-    pub const YROT: ThrusterGroup = ThrusterGroup(1 << 9);
-    pub const NYROT: ThrusterGroup = ThrusterGroup(1 << 10);
-    pub const ZROT: ThrusterGroup = ThrusterGroup(1 << 11);
-    pub const NZROT: ThrusterGroup = ThrusterGroup(1 << 12);
+    pub const NONE: ThrusterGroup = ThrusterGroup(0);
+    pub const FORWARD: ThrusterGroup = ThrusterGroup(1 << 0);
+    pub const BACKWARD: ThrusterGroup = ThrusterGroup(1 << 1);
+    pub const LEFT: ThrusterGroup = ThrusterGroup(1 << 2);
+    pub const RIGHT: ThrusterGroup = ThrusterGroup(1 << 3);
+    pub const UP: ThrusterGroup = ThrusterGroup(1 << 4);
+    pub const DOWN: ThrusterGroup = ThrusterGroup(1 << 5);
+    pub const XROT: ThrusterGroup = ThrusterGroup(1 << 6);
+    pub const NXROT: ThrusterGroup = ThrusterGroup(1 << 7);
+    pub const YROT: ThrusterGroup = ThrusterGroup(1 << 8);
+    pub const NYROT: ThrusterGroup = ThrusterGroup(1 << 9);
+    pub const ZROT: ThrusterGroup = ThrusterGroup(1 << 10);
+    pub const NZROT: ThrusterGroup = ThrusterGroup(1 << 11);
 
     fn intersects(self, other: ThrusterGroup) -> bool {
         (self.0 & other.0) != 0
+    }
+
+    fn index(self) -> usize {
+        assert!(self.0 != 0);
+        self.0.trailing_zeros() as usize - 1
     }
 }
 
@@ -68,18 +73,37 @@ pub struct Thrusters {
     pub groups_to_fire: ThrusterGroup,
 }
 
-#[derive(Component, Reflect, Serialize, Deserialize, Default)]
+#[derive(Component, Reflect, Serialize, Deserialize)]
 #[reflect(Component, Serialize, Deserialize)]
 pub struct OrientationRegulator {
     target: Quat,
+    gain: f32,
+}
+
+impl Default for OrientationRegulator {
+    fn default() -> Self {
+        Self {
+            target: Default::default(),
+            gain: 1.0,
+        }
+    }
+}
+
+pub fn reset_thrusters(mut query: Query<&mut Thrusters>) {
+    for mut thrusters in query.iter_mut() {
+        thrusters.groups_to_fire = ThrusterGroup::NONE;
+        for i in 0..12 {
+            thrusters.group_thrust[i] = 0.0;
+        }
+    }
 }
 
 pub fn orientation_regulator(
     mut query: Query<(&Transform, &mut Thrusters, &OrientationRegulator)>,
 ) {
-    let groups_to_fire = ThrusterGroup::NONE;
+    for (transfrom, mut thrusters, regulator) in query.iter_mut() {
+        let mut groups_to_fire = ThrusterGroup::NONE;
 
-    for (transfrom, thrusters, regulator) in query.iter_mut() {
         let differense = regulator.target * transfrom.rotation.inverse();
         let differense = differense.to_axis_angle();
 
@@ -87,7 +111,45 @@ pub fn orientation_regulator(
         let y_error = differense.0.y * differense.1;
         let z_error = differense.0.z * differense.1;
 
-        //println!("{:?}", y_error);
+        let x_error_abs = x_error.abs();
+        let y_error_abs = y_error.abs();
+        let z_error_abs = z_error.abs();
+
+        // Calculate the needed thrust magnitudes and determine which thruster groups to fire
+        if x_error_abs > 0.0 {
+            let x_thrust = regulator.gain * x_error_abs;
+            if x_error > 0.0 {
+                groups_to_fire |= ThrusterGroup::XROT;
+                thrusters.group_thrust[ThrusterGroup::XROT.index()] = x_thrust;
+            } else {
+                groups_to_fire |= ThrusterGroup::NXROT;
+                thrusters.group_thrust[ThrusterGroup::NXROT.index()] = x_thrust;
+            }
+        }
+
+        if y_error_abs > 0.0 {
+            let y_thrust = regulator.gain * y_error_abs;
+            if y_error > 0.0 {
+                groups_to_fire |= ThrusterGroup::YROT;
+                thrusters.group_thrust[ThrusterGroup::YROT.index()] = y_thrust;
+            } else {
+                groups_to_fire |= ThrusterGroup::NYROT;
+                thrusters.group_thrust[ThrusterGroup::NYROT.index()] = y_thrust;
+            }
+        }
+
+        if z_error_abs > 0.0 {
+            let z_thrust = regulator.gain * z_error_abs;
+            if z_error > 0.0 {
+                groups_to_fire |= ThrusterGroup::ZROT;
+                thrusters.group_thrust[ThrusterGroup::ZROT.index()] = z_thrust;
+            } else {
+                groups_to_fire |= ThrusterGroup::NZROT;
+                thrusters.group_thrust[ThrusterGroup::NZROT.index()] = z_thrust;
+            }
+        }
+
+        thrusters.groups_to_fire |= groups_to_fire;
     }
 }
 
@@ -153,13 +215,13 @@ pub fn player_thrusters(
 pub fn thrusters(
     mut query: Query<(
         &Transform,
-        &mut Thrusters,
+        &Thrusters,
         &mut ExternalForce,
         &ReadMassProperties,
     )>,
     mut lines: ResMut<DebugLines>,
 ) {
-    for (transform, mut thrusters, mut forces, mass_props) in query.iter_mut() {
+    for (transform, thrusters, mut forces, mass_props) in query.iter_mut() {
         *forces = ExternalForce::default();
 
         for thruster in thrusters
@@ -167,17 +229,34 @@ pub fn thrusters(
             .iter()
             .filter(|thruster| thruster.group.intersects(thrusters.groups_to_fire))
         {
+            let mut magnitude = 0.0;
+            for i in 0..12 {
+                if thruster.group.0 & (1 << (i + 1)) > 0 {
+                    magnitude += thrusters.group_thrust[i];
+                }
+            }
+
+            if magnitude == 0.0 {
+                magnitude = 1.0;
+            } else {
+                magnitude = magnitude.clamp(0.0, 1.0);
+            }
+
             let pos = transform.transform_point(thruster.offset);
             let center_of_mass = transform.transform_point(mass_props.0.local_center_of_mass);
-            let force =
-                thruster.thrust * -(transform.rotation * thruster.direction).mul_vec3(-Vec3::Z);
+            let force = magnitude
+                * thruster.thrust
+                * -(transform.rotation * thruster.direction).mul_vec3(-Vec3::Z);
 
             *forces = ExternalForce::at_point(force, pos, center_of_mass);
 
-            lines.line_colored(pos, pos + 0.2 * force.normalize(), 0.0, Color::RED);
+            lines.line_colored(
+                pos,
+                pos + 0.4 * -(magnitude * force.normalize()),
+                0.0,
+                Color::RED,
+            );
         }
-
-        thrusters.groups_to_fire = ThrusterGroup::NONE;
     }
 }
 

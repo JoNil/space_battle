@@ -2,7 +2,10 @@ use bevy::{
     diagnostic::FrameTimeDiagnosticsPlugin,
     math::{Quat, Vec3},
     pbr::PointLightBundle,
-    prelude::{shape, AssetServer, Assets, Color, Mesh, PbrBundle, StandardMaterial},
+    prelude::{
+        shape, AssetServer, Assets, Color, CoreSet, IntoSystemConfig, Mesh, PbrBundle,
+        StandardMaterial,
+    },
     prelude::{
         App, BuildChildren, Camera3dBundle, Commands, ComputedVisibility, Msaa, Res, ResMut,
         Transform, Visibility,
@@ -21,8 +24,8 @@ use bevy_rapier3d::{
     render::RapierDebugRenderPlugin,
 };
 use ship::{
-    debug_thruster, orientation_regulator, player_thrusters, thrusters, OrientationRegulator,
-    PlayerShip, Thruster, ThrusterGroup, Thrusters,
+    debug_thruster, orientation_regulator, player_thrusters, reset_thrusters, thrusters,
+    OrientationRegulator, PlayerShip, Thruster, ThrusterGroup, Thrusters,
 };
 use std::f32::consts::PI;
 use ui::physics_debug_panel::PhysicsProfilingPanel;
@@ -43,6 +46,7 @@ fn main() {
             ..Default::default()
         })
         .add_plugin(DebugLinesPlugin::default())
+        .add_system(reset_thrusters.in_base_set(CoreSet::PreUpdate))
         .add_system(orientation_regulator)
         .add_system(player_thrusters)
         .add_system(thrusters)
@@ -58,165 +62,149 @@ fn main() {
         .run();
 }
 
-/*fn ui_example(mut contexts: EguiContexts, mut query: Query<&mut Thrusters>) {
-    egui::Window::new("Hello").show(contexts.ctx_mut(), |ui| {
-        for mut thrusters in query.iter_mut() {
-            for thruster in &mut thrusters.thrusters {
-                ui.horizontal(|ui| {
-                    ui.label("Thruster");
-                    ui.add(DragValue::new(&mut thruster.offset.x).speed(0.01));
-                    ui.add(DragValue::new(&mut thruster.offset.y).speed(0.01));
-                    ui.add(DragValue::new(&mut thruster.offset.z).speed(0.01));
-                });
-            }
-        }
-    });
-}*/
-
 fn add_test_objects(mut commands: Commands, asset_server: Res<AssetServer>) {
-    {
-        commands
-            .spawn_empty()
-            .insert(TransformBundle::from(Transform::from_xyz(0.0, 0.0, 0.0)))
-            .insert(RigidBody::Dynamic)
-            .insert(GravityScale(0.0))
-            .insert(AdditionalMassProperties::Mass(100.0))
-            .insert(ReadMassProperties::default())
-            .insert(ExternalForce::default())
-            .insert(Collider::cuboid(1.0, 1.0, 1.0))
-            .insert(Thrusters {
-                thrusters: Vec::from([
-                    Thruster {
-                        offset: Vec3::new(0.0, 0.0, 4.0),
-                        direction: Quat::from_axis_angle(Vec3::Y, PI),
-                        thrust: 200.0,
-                        group: ThrusterGroup::FORWARD,
-                    },
-                    Thruster {
-                        offset: Vec3::new(0.0, 0.0, -4.0),
-                        direction: Quat::from_axis_angle(Vec3::Y, 0.0),
-                        thrust: 50.0,
-                        group: ThrusterGroup::BACKWARD,
-                    },
-                    // Upper pointing to sides
-                    Thruster {
-                        offset: Vec3::new(1.0, 1.0, -4.0),
-                        direction: Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
-                        thrust: 1.0,
-                        group: ThrusterGroup::LEFT | ThrusterGroup::YROT | ThrusterGroup::ZROT,
-                    },
-                    Thruster {
-                        offset: Vec3::new(1.0, 1.0, 4.0),
-                        direction: Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
-                        thrust: 1.0,
-                        group: ThrusterGroup::LEFT | ThrusterGroup::NYROT | ThrusterGroup::ZROT,
-                    },
-                    Thruster {
-                        offset: Vec3::new(-1.0, 1.0, -4.0),
-                        direction: Quat::from_axis_angle(Vec3::Y, PI / 2.0),
-                        thrust: 1.0,
-                        group: ThrusterGroup::RIGHT | ThrusterGroup::NYROT | ThrusterGroup::NZROT,
-                    },
-                    Thruster {
-                        offset: Vec3::new(-1.0, 1.0, 4.0),
-                        direction: Quat::from_axis_angle(Vec3::Y, PI / 2.0),
-                        thrust: 1.0,
-                        group: ThrusterGroup::RIGHT | ThrusterGroup::YROT | ThrusterGroup::NZROT,
-                    },
-                    // Lower pointing to sides
-                    Thruster {
-                        offset: Vec3::new(1.0, -1.0, -4.0),
-                        direction: Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
-                        thrust: 1.0,
-                        group: ThrusterGroup::LEFT | ThrusterGroup::YROT | ThrusterGroup::NZROT,
-                    },
-                    Thruster {
-                        offset: Vec3::new(1.0, -1.0, 4.0),
-                        direction: Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
-                        thrust: 1.0,
-                        group: ThrusterGroup::LEFT | ThrusterGroup::NYROT | ThrusterGroup::NZROT,
-                    },
-                    Thruster {
-                        offset: Vec3::new(-1.0, -1.0, -4.0),
-                        direction: Quat::from_axis_angle(Vec3::Y, PI / 2.0),
-                        thrust: 1.0,
-                        group: ThrusterGroup::RIGHT | ThrusterGroup::NYROT | ThrusterGroup::ZROT,
-                    },
-                    Thruster {
-                        offset: Vec3::new(-1.0, -1.0, 4.0),
-                        direction: Quat::from_axis_angle(Vec3::Y, PI / 2.0),
-                        thrust: 1.0,
-                        group: ThrusterGroup::RIGHT | ThrusterGroup::YROT | ThrusterGroup::ZROT,
-                    },
-                    // Upper pointing up
-                    Thruster {
-                        offset: Vec3::new(1.0, 1.0, -4.0),
-                        direction: Quat::from_axis_angle(Vec3::X, PI / 2.0),
-                        thrust: 1.0,
-                        group: ThrusterGroup::DOWN | ThrusterGroup::NXROT | ThrusterGroup::NZROT,
-                    },
-                    Thruster {
-                        offset: Vec3::new(1.0, 1.0, 4.0),
-                        direction: Quat::from_axis_angle(Vec3::X, PI / 2.0),
-                        thrust: 1.0,
-                        group: ThrusterGroup::DOWN | ThrusterGroup::XROT | ThrusterGroup::NZROT,
-                    },
-                    Thruster {
-                        offset: Vec3::new(-1.0, 1.0, -4.0),
-                        direction: Quat::from_axis_angle(Vec3::X, PI / 2.0),
-                        thrust: 1.0,
-                        group: ThrusterGroup::DOWN | ThrusterGroup::NXROT | ThrusterGroup::ZROT,
-                    },
-                    Thruster {
-                        offset: Vec3::new(-1.0, 1.0, 4.0),
-                        direction: Quat::from_axis_angle(Vec3::X, PI / 2.0),
-                        thrust: 1.0,
-                        group: ThrusterGroup::DOWN | ThrusterGroup::XROT | ThrusterGroup::ZROT,
-                    },
-                    // Lower pointing down
-                    Thruster {
-                        offset: Vec3::new(1.0, -1.0, -4.0),
-                        direction: Quat::from_axis_angle(Vec3::X, -PI / 2.0),
-                        thrust: 1.0,
-                        group: ThrusterGroup::UP | ThrusterGroup::XROT | ThrusterGroup::ZROT,
-                    },
-                    Thruster {
-                        offset: Vec3::new(1.0, -1.0, 4.0),
-                        direction: Quat::from_axis_angle(Vec3::X, -PI / 2.0),
-                        thrust: 1.0,
-                        group: ThrusterGroup::UP | ThrusterGroup::NXROT | ThrusterGroup::ZROT,
-                    },
-                    Thruster {
-                        offset: Vec3::new(-1.0, -1.0, -4.0),
-                        direction: Quat::from_axis_angle(Vec3::X, -PI / 2.0),
-                        thrust: 1.0,
-                        group: ThrusterGroup::UP | ThrusterGroup::XROT | ThrusterGroup::NZROT,
-                    },
-                    Thruster {
-                        offset: Vec3::new(-1.0, -1.0, 4.0),
-                        direction: Quat::from_axis_angle(Vec3::X, -PI / 2.0),
-                        thrust: 1.0,
-                        group: ThrusterGroup::UP | ThrusterGroup::NXROT | ThrusterGroup::NZROT,
-                    },
-                ]),
+    commands
+        .spawn_empty()
+        .insert(TransformBundle::from(Transform::from_xyz(0.0, 0.0, 0.0)))
+        .insert(RigidBody::Dynamic)
+        .insert(GravityScale(0.0))
+        .insert(AdditionalMassProperties::Mass(100.0))
+        .insert(ReadMassProperties::default())
+        .insert(ExternalForce::default())
+        .insert(Collider::cuboid(1.0, 1.0, 1.0))
+        .insert(Thrusters {
+            thrusters: Vec::from([
+                Thruster {
+                    offset: Vec3::new(0.0, 0.0, 4.0),
+                    direction: Quat::from_axis_angle(Vec3::Y, PI),
+                    thrust: 200.0,
+                    group: ThrusterGroup::FORWARD,
+                },
+                Thruster {
+                    offset: Vec3::new(0.0, 0.0, -4.0),
+                    direction: Quat::from_axis_angle(Vec3::Y, 0.0),
+                    thrust: 50.0,
+                    group: ThrusterGroup::BACKWARD,
+                },
+                // Upper pointing to sides
+                Thruster {
+                    offset: Vec3::new(1.0, 1.0, -4.0),
+                    direction: Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
+                    thrust: 1.0,
+                    group: ThrusterGroup::LEFT | ThrusterGroup::YROT | ThrusterGroup::ZROT,
+                },
+                Thruster {
+                    offset: Vec3::new(1.0, 1.0, 4.0),
+                    direction: Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
+                    thrust: 1.0,
+                    group: ThrusterGroup::LEFT | ThrusterGroup::NYROT | ThrusterGroup::ZROT,
+                },
+                Thruster {
+                    offset: Vec3::new(-1.0, 1.0, -4.0),
+                    direction: Quat::from_axis_angle(Vec3::Y, PI / 2.0),
+                    thrust: 1.0,
+                    group: ThrusterGroup::RIGHT | ThrusterGroup::NYROT | ThrusterGroup::NZROT,
+                },
+                Thruster {
+                    offset: Vec3::new(-1.0, 1.0, 4.0),
+                    direction: Quat::from_axis_angle(Vec3::Y, PI / 2.0),
+                    thrust: 1.0,
+                    group: ThrusterGroup::RIGHT | ThrusterGroup::YROT | ThrusterGroup::NZROT,
+                },
+                // Lower pointing to sides
+                Thruster {
+                    offset: Vec3::new(1.0, -1.0, -4.0),
+                    direction: Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
+                    thrust: 1.0,
+                    group: ThrusterGroup::LEFT | ThrusterGroup::YROT | ThrusterGroup::NZROT,
+                },
+                Thruster {
+                    offset: Vec3::new(1.0, -1.0, 4.0),
+                    direction: Quat::from_axis_angle(Vec3::Y, -PI / 2.0),
+                    thrust: 1.0,
+                    group: ThrusterGroup::LEFT | ThrusterGroup::NYROT | ThrusterGroup::NZROT,
+                },
+                Thruster {
+                    offset: Vec3::new(-1.0, -1.0, -4.0),
+                    direction: Quat::from_axis_angle(Vec3::Y, PI / 2.0),
+                    thrust: 1.0,
+                    group: ThrusterGroup::RIGHT | ThrusterGroup::NYROT | ThrusterGroup::ZROT,
+                },
+                Thruster {
+                    offset: Vec3::new(-1.0, -1.0, 4.0),
+                    direction: Quat::from_axis_angle(Vec3::Y, PI / 2.0),
+                    thrust: 1.0,
+                    group: ThrusterGroup::RIGHT | ThrusterGroup::YROT | ThrusterGroup::ZROT,
+                },
+                // Upper pointing up
+                Thruster {
+                    offset: Vec3::new(1.0, 1.0, -4.0),
+                    direction: Quat::from_axis_angle(Vec3::X, PI / 2.0),
+                    thrust: 1.0,
+                    group: ThrusterGroup::DOWN | ThrusterGroup::NXROT | ThrusterGroup::NZROT,
+                },
+                Thruster {
+                    offset: Vec3::new(1.0, 1.0, 4.0),
+                    direction: Quat::from_axis_angle(Vec3::X, PI / 2.0),
+                    thrust: 1.0,
+                    group: ThrusterGroup::DOWN | ThrusterGroup::XROT | ThrusterGroup::NZROT,
+                },
+                Thruster {
+                    offset: Vec3::new(-1.0, 1.0, -4.0),
+                    direction: Quat::from_axis_angle(Vec3::X, PI / 2.0),
+                    thrust: 1.0,
+                    group: ThrusterGroup::DOWN | ThrusterGroup::NXROT | ThrusterGroup::ZROT,
+                },
+                Thruster {
+                    offset: Vec3::new(-1.0, 1.0, 4.0),
+                    direction: Quat::from_axis_angle(Vec3::X, PI / 2.0),
+                    thrust: 1.0,
+                    group: ThrusterGroup::DOWN | ThrusterGroup::XROT | ThrusterGroup::ZROT,
+                },
+                // Lower pointing down
+                Thruster {
+                    offset: Vec3::new(1.0, -1.0, -4.0),
+                    direction: Quat::from_axis_angle(Vec3::X, -PI / 2.0),
+                    thrust: 1.0,
+                    group: ThrusterGroup::UP | ThrusterGroup::XROT | ThrusterGroup::ZROT,
+                },
+                Thruster {
+                    offset: Vec3::new(1.0, -1.0, 4.0),
+                    direction: Quat::from_axis_angle(Vec3::X, -PI / 2.0),
+                    thrust: 1.0,
+                    group: ThrusterGroup::UP | ThrusterGroup::NXROT | ThrusterGroup::ZROT,
+                },
+                Thruster {
+                    offset: Vec3::new(-1.0, -1.0, -4.0),
+                    direction: Quat::from_axis_angle(Vec3::X, -PI / 2.0),
+                    thrust: 1.0,
+                    group: ThrusterGroup::UP | ThrusterGroup::XROT | ThrusterGroup::NZROT,
+                },
+                Thruster {
+                    offset: Vec3::new(-1.0, -1.0, 4.0),
+                    direction: Quat::from_axis_angle(Vec3::X, -PI / 2.0),
+                    thrust: 1.0,
+                    group: ThrusterGroup::UP | ThrusterGroup::NXROT | ThrusterGroup::NZROT,
+                },
+            ]),
+            ..Default::default()
+        })
+        .insert(PlayerShip)
+        .insert(OrientationRegulator::default())
+        .insert(Visibility::default())
+        .insert(ComputedVisibility::default())
+        .with_children(|p| {
+            p.spawn(SceneBundle {
+                scene: asset_server.load("models/space_ship/scene.gltf#Scene0"),
                 ..Default::default()
-            })
-            .insert(PlayerShip)
-            .insert(OrientationRegulator::default())
-            .insert(Visibility::default())
-            .insert(ComputedVisibility::default())
-            .with_children(|p| {
-                p.spawn(SceneBundle {
-                    scene: asset_server.load("models/space_ship/scene.gltf#Scene0"),
-                    ..Default::default()
-                });
-                p.spawn(Camera3dBundle {
-                    transform: Transform::from_translation(Vec3::new(0.0, 1.0, 8.0))
-                        .looking_at(Vec3::default(), Vec3::Y),
-                    ..Default::default()
-                });
             });
-    }
+            p.spawn(Camera3dBundle {
+                transform: Transform::from_translation(Vec3::new(0.0, 1.0, 8.0))
+                    .looking_at(Vec3::default(), Vec3::Y),
+                ..Default::default()
+            });
+        });
+
     commands.spawn(PointLightBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 5.0, 5.0)),
         ..Default::default()
