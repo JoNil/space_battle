@@ -1,15 +1,16 @@
-use std::ops::{BitOr, BitOrAssign};
-
 use bevy::{
     input::Input,
     math::{Quat, Vec3},
-    prelude::{Color, Component, KeyCode, Query, Res, ResMut, Transform},
-    reflect::Reflect,
+    prelude::{Color, Component, KeyCode, Query, ReflectComponent, Res, ResMut, Transform},
+    reflect::{FromReflect, Reflect, ReflectDeserialize, ReflectSerialize},
 };
 use bevy_prototype_debug_lines::DebugLines;
 use bevy_rapier3d::prelude::{ExternalForce, ReadMassProperties};
+use serde::{Deserialize, Serialize};
+use std::ops::{BitOr, BitOrAssign};
 
-#[derive(Copy, Clone, Default, Reflect)]
+#[derive(Copy, Clone, Default, Reflect, FromReflect, Serialize, Deserialize)]
+#[reflect(Serialize, Deserialize)]
 pub struct ThrusterGroup(u32);
 
 impl ThrusterGroup {
@@ -46,10 +47,12 @@ impl BitOr for ThrusterGroup {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Reflect, Serialize, Deserialize, Default)]
+#[reflect(Component, Serialize, Deserialize)]
 pub struct PlayerShip;
 
-#[derive(Default, Reflect)]
+#[derive(Reflect, FromReflect, Serialize, Deserialize, Default)]
+#[reflect(Serialize, Deserialize)]
 pub struct Thruster {
     pub offset: Vec3,
     pub direction: Quat,
@@ -57,15 +60,16 @@ pub struct Thruster {
     pub group: ThrusterGroup,
 }
 
-#[derive(Component, Default, Reflect)]
+#[derive(Component, Reflect, Serialize, Deserialize, Default)]
+#[reflect(Component, Serialize, Deserialize)]
 pub struct Thrusters {
-    #[reflect(ignore)]
     pub thrusters: Vec<Thruster>,
     pub group_thrust: [f32; 12],
     pub groups_to_fire: ThrusterGroup,
 }
 
-#[derive(Component, Default, Reflect)]
+#[derive(Component, Reflect, Serialize, Deserialize, Default)]
+#[reflect(Component, Serialize, Deserialize)]
 pub struct OrientationRegulator {
     target: Quat,
 }

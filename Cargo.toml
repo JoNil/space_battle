@@ -11,3 +11,4 @@ bevy_editor_pls = "0.3"
 bevy_prototype_debug_lines = { version = "0.10", features = ["3d"] }
 bevy_rapier3d = { version = "0.21", features = ["parallel", "simd-stable"] }
 rapier3d = { version = "0.17", features = ["profiler"] }
+serde = { version = "1", features = ["derive"] }

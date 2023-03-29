@@ -49,6 +49,11 @@ fn main() {
         .add_system(debug_thruster)
         .add_startup_system(add_test_objects)
         .add_startup_system(setup_physics)
+        .register_type::<ThrusterGroup>()
+        .register_type::<PlayerShip>()
+        .register_type::<Thruster>()
+        .register_type::<Thrusters>()
+        .register_type::<OrientationRegulator>()
         .add_editor_window::<PhysicsProfilingPanel>()
         .run();
 }
