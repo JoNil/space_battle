@@ -108,8 +108,8 @@ impl Default for OrientationRegulator {
         Self {
             target: Default::default(),
             p_gain: 1.0,
-            i_gain: 0.0,
-            d_gain: 0.0,
+            i_gain: 0.5,
+            d_gain: 1.0,
             prev_error: Vec3::ZERO,
             integral_error: Vec3::ZERO,
         }
@@ -160,7 +160,8 @@ pub fn orientation_regulator(
 
         let dt = time.delta_seconds();
         let derivative_error = (error - regulator.prev_error) / dt;
-        regulator.integral_error += error * dt;
+        regulator.integral_error = (regulator.integral_error + error * dt)
+            .clamp(vec3(-1.0, -1.0, -1.0), vec3(1.0, 1.0, 1.0));
 
         let thrust = regulator.p_gain * error_abs
             + regulator.i_gain * regulator.integral_error

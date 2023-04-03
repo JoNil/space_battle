@@ -19,7 +19,7 @@ use bevy_prototype_debug_lines::DebugLinesPlugin;
 use bevy_rapier3d::{
     prelude::{
         AdditionalMassProperties, Collider, ExternalForce, GravityScale, NoUserData,
-        RapierPhysicsPlugin, ReadMassProperties, RigidBody,
+        RapierPhysicsPlugin, ReadMassProperties, RigidBody, Sleeping,
     },
     render::RapierDebugRenderPlugin,
 };
@@ -71,6 +71,7 @@ fn add_test_objects(mut commands: Commands, asset_server: Res<AssetServer>) {
         .insert(AdditionalMassProperties::Mass(100.0))
         .insert(ReadMassProperties::default())
         .insert(ExternalForce::default())
+        .insert(Sleeping::disabled())
         .insert(Collider::cuboid(1.0, 1.0, 1.0))
         .insert(Thrusters {
             thrusters: Vec::from([
