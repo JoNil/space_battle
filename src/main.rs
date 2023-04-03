@@ -41,7 +41,7 @@ fn main() {
         .add_plugin(FrameTimeDiagnosticsPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierDebugRenderPlugin {
-            always_on_top: false,
+            always_on_top: true,
             enabled: true,
             ..Default::default()
         })

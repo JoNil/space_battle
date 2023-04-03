@@ -1,6 +1,6 @@
 use bevy::{
     input::Input,
-    math::{Quat, Vec3},
+    math::{vec3, Quat, Vec3},
     prelude::{Color, Component, KeyCode, Query, ReflectComponent, Res, ResMut, Transform},
     reflect::{FromReflect, Reflect, ReflectDeserialize, ReflectSerialize},
 };
@@ -248,13 +248,23 @@ pub fn thrusters(
                 * thruster.thrust
                 * -(transform.rotation * thruster.direction).mul_vec3(-Vec3::Z);
 
-            *forces = ExternalForce::at_point(force, pos, center_of_mass);
+            *forces += ExternalForce::at_point(force, pos, center_of_mass);
 
             lines.line_colored(
                 pos,
                 pos + 0.4 * -(magnitude * force.normalize()),
                 0.0,
                 Color::RED,
+            );
+        }
+
+        {
+            let center_of_mass = transform.transform_point(mass_props.0.local_center_of_mass);
+            lines.line_colored(
+                center_of_mass,
+                center_of_mass + vec3(0.0, 0.3, 0.0),
+                0.0,
+                Color::GREEN,
             );
         }
     }
