@@ -101,6 +101,7 @@ pub struct OrientationRegulator {
     d_gain: f32,
     prev_error: Vec3,
     integral_error: Vec3,
+    enable: bool,
 }
 
 impl Default for OrientationRegulator {
@@ -112,6 +113,7 @@ impl Default for OrientationRegulator {
             d_gain: 1.0,
             prev_error: Vec3::ZERO,
             integral_error: Vec3::ZERO,
+            enable: true,
         }
     }
 }
@@ -130,58 +132,60 @@ pub fn orientation_regulator(
     mut query: Query<(&Transform, &mut Thrusters, &mut OrientationRegulator)>,
     mut lines: ResMut<DebugLines>,
 ) {
-    for (transfrom, mut thrusters, mut regulator) in query.iter_mut() {
-        let mut groups_to_fire = ThrusterGroup::NONE;
+    if enable {
+        for (transfrom, mut thrusters, mut regulator) in query.iter_mut() {
+            let mut groups_to_fire = ThrusterGroup::NONE;
 
-        let differense = regulator.target * transfrom.rotation.inverse();
-        let differense = differense.to_axis_angle();
+            let differense = regulator.target * transfrom.rotation.inverse();
+            let differense = differense.to_axis_angle();
 
-        lines.line_colored(
-            vec3(0.0, 0.0, 0.0),
-            regulator.target.mul_vec3(vec3(0.0, 0.0, -3.0)),
-            0.0,
-            Color::YELLOW,
-        );
+            lines.line_colored(
+                vec3(0.0, 0.0, 0.0),
+                regulator.target.mul_vec3(vec3(0.0, 0.0, -3.0)),
+                0.0,
+                Color::YELLOW,
+            );
 
-        lines.line_colored(
-            vec3(0.0, 0.0, 0.0),
-            transfrom.rotation.mul_vec3(vec3(0.0, 0.0, -3.0)),
-            0.0,
-            Color::BLUE,
-        );
+            lines.line_colored(
+                vec3(0.0, 0.0, 0.0),
+                transfrom.rotation.mul_vec3(vec3(0.0, 0.0, -3.0)),
+                0.0,
+                Color::BLUE,
+            );
 
-        let error = Vec3::new(
-            differense.0.x * differense.1,
-            differense.0.y * differense.1,
-            differense.0.z * differense.1,
-        );
+            let error = Vec3::new(
+                differense.0.x * differense.1,
+                differense.0.y * differense.1,
+                differense.0.z * differense.1,
+            );
 
-        let error_abs = error.abs();
+            let error_abs = error.abs();
 
-        let dt = time.delta_seconds();
-        let derivative_error = (error - regulator.prev_error) / dt;
-        regulator.integral_error = (regulator.integral_error + error * dt)
-            .clamp(vec3(-1.0, -1.0, -1.0), vec3(1.0, 1.0, 1.0));
+            let dt = time.delta_seconds();
+            let derivative_error = (error - regulator.prev_error) / dt;
+            regulator.integral_error = (regulator.integral_error + error * dt)
+                .clamp(vec3(-1.0, -1.0, -1.0), vec3(1.0, 1.0, 1.0));
 
-        let thrust = regulator.p_gain * error_abs
-            + regulator.i_gain * regulator.integral_error
-            + regulator.d_gain * derivative_error;
+            let thrust = regulator.p_gain * error_abs
+                + regulator.i_gain * regulator.integral_error
+                + regulator.d_gain * derivative_error;
 
-        for axis in 0..3 {
-            if error_abs[axis] > 0.0 {
-                let group = if error[axis] > 0.0 {
-                    ThrusterGroup::positive_rotation(axis)
-                } else {
-                    ThrusterGroup::negative_rotation(axis)
-                };
-                groups_to_fire |= group;
-                thrusters.group_thrust[group.index()] = thrust[axis];
+            for axis in 0..3 {
+                if error_abs[axis] > 0.0 {
+                    let group = if error[axis] > 0.0 {
+                        ThrusterGroup::positive_rotation(axis)
+                    } else {
+                        ThrusterGroup::negative_rotation(axis)
+                    };
+                    groups_to_fire |= group;
+                    thrusters.group_thrust[group.index()] = thrust[axis];
+                }
             }
+
+            regulator.prev_error = error;
+
+            thrusters.groups_to_fire |= groups_to_fire;
         }
-
-        regulator.prev_error = error;
-
-        thrusters.groups_to_fire |= groups_to_fire;
     }
 }
 
