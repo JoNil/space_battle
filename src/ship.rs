@@ -100,12 +100,27 @@ pub fn reset_thrusters(mut query: Query<&mut Thrusters>) {
 
 pub fn orientation_regulator(
     mut query: Query<(&Transform, &mut Thrusters, &OrientationRegulator)>,
+    mut lines: ResMut<DebugLines>,
 ) {
     for (transfrom, mut thrusters, regulator) in query.iter_mut() {
         let mut groups_to_fire = ThrusterGroup::NONE;
 
         let differense = regulator.target * transfrom.rotation.inverse();
         let differense = differense.to_axis_angle();
+
+        lines.line_colored(
+            vec3(0.0, 0.0, 0.0),
+            regulator.target.mul_vec3(vec3(0.0, 0.0, -3.0)),
+            0.0,
+            Color::YELLOW,
+        );
+
+        lines.line_colored(
+            vec3(0.0, 0.0, 0.0),
+            transfrom.rotation.mul_vec3(vec3(0.0, 0.0, -3.0)),
+            0.0,
+            Color::BLUE,
+        );
 
         let x_error = differense.0.x * differense.1;
         let y_error = differense.0.y * differense.1;
