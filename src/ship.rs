@@ -140,15 +140,15 @@ pub fn orientation_regulator(
             let differense = differense.to_axis_angle();
 
             lines.line_colored(
-                vec3(0.0, 0.0, 0.0),
-                regulator.target.mul_vec3(vec3(0.0, 0.0, -3.0)),
+                transfrom.translation,
+                transfrom.translation + regulator.target.mul_vec3(vec3(0.0, 0.0, -3.0)),
                 0.0,
                 Color::YELLOW,
             );
 
             lines.line_colored(
-                vec3(0.0, 0.0, 0.0),
-                transfrom.rotation.mul_vec3(vec3(0.0, 0.0, -3.0)),
+                transfrom.translation,
+                transfrom.translation + transfrom.rotation.mul_vec3(vec3(0.0, 0.0, -3.0)),
                 0.0,
                 Color::BLUE,
             );
