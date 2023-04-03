@@ -3,6 +3,7 @@ use bevy::{
     math::{vec3, Quat, Vec3},
     prelude::{Color, Component, KeyCode, Query, ReflectComponent, Res, ResMut, Transform},
     reflect::{FromReflect, Reflect, ReflectDeserialize, ReflectSerialize},
+    time::Time,
 };
 use bevy_prototype_debug_lines::DebugLines;
 use bevy_rapier3d::prelude::{ExternalForce, ReadMassProperties};
@@ -35,6 +36,24 @@ impl ThrusterGroup {
     fn index(self) -> usize {
         assert!(self.0 != 0);
         self.0.trailing_zeros() as usize - 1
+    }
+
+    fn positive_rotation(axis: usize) -> ThrusterGroup {
+        match axis {
+            0 => ThrusterGroup::XROT,
+            1 => ThrusterGroup::YROT,
+            2 => ThrusterGroup::ZROT,
+            _ => panic!("Unknown Axis"),
+        }
+    }
+
+    fn negative_rotation(axis: usize) -> ThrusterGroup {
+        match axis {
+            0 => ThrusterGroup::NXROT,
+            1 => ThrusterGroup::NYROT,
+            2 => ThrusterGroup::NZROT,
+            _ => panic!("Unknown Axis"),
+        }
     }
 }
 
@@ -77,14 +96,22 @@ pub struct Thrusters {
 #[reflect(Component, Serialize, Deserialize)]
 pub struct OrientationRegulator {
     target: Quat,
-    gain: f32,
+    p_gain: f32,
+    i_gain: f32,
+    d_gain: f32,
+    prev_error: Vec3,
+    integral_error: Vec3,
 }
 
 impl Default for OrientationRegulator {
     fn default() -> Self {
         Self {
             target: Default::default(),
-            gain: 1.0,
+            p_gain: 1.0,
+            i_gain: 0.0,
+            d_gain: 0.0,
+            prev_error: Vec3::ZERO,
+            integral_error: Vec3::ZERO,
         }
     }
 }
@@ -99,10 +126,11 @@ pub fn reset_thrusters(mut query: Query<&mut Thrusters>) {
 }
 
 pub fn orientation_regulator(
-    mut query: Query<(&Transform, &mut Thrusters, &OrientationRegulator)>,
+    time: Res<Time>,
+    mut query: Query<(&Transform, &mut Thrusters, &mut OrientationRegulator)>,
     mut lines: ResMut<DebugLines>,
 ) {
-    for (transfrom, mut thrusters, regulator) in query.iter_mut() {
+    for (transfrom, mut thrusters, mut regulator) in query.iter_mut() {
         let mut groups_to_fire = ThrusterGroup::NONE;
 
         let differense = regulator.target * transfrom.rotation.inverse();
@@ -122,47 +150,35 @@ pub fn orientation_regulator(
             Color::BLUE,
         );
 
-        let x_error = differense.0.x * differense.1;
-        let y_error = differense.0.y * differense.1;
-        let z_error = differense.0.z * differense.1;
+        let error = Vec3::new(
+            differense.0.x * differense.1,
+            differense.0.y * differense.1,
+            differense.0.z * differense.1,
+        );
 
-        let x_error_abs = x_error.abs();
-        let y_error_abs = y_error.abs();
-        let z_error_abs = z_error.abs();
+        let error_abs = error.abs();
 
-        // Calculate the needed thrust magnitudes and determine which thruster groups to fire
-        if x_error_abs > 0.0 {
-            let x_thrust = regulator.gain * x_error_abs;
-            if x_error > 0.0 {
-                groups_to_fire |= ThrusterGroup::XROT;
-                thrusters.group_thrust[ThrusterGroup::XROT.index()] = x_thrust;
-            } else {
-                groups_to_fire |= ThrusterGroup::NXROT;
-                thrusters.group_thrust[ThrusterGroup::NXROT.index()] = x_thrust;
+        let dt = time.delta_seconds();
+        let derivative_error = (error - regulator.prev_error) / dt;
+        regulator.integral_error += error * dt;
+
+        let thrust = regulator.p_gain * error_abs
+            + regulator.i_gain * regulator.integral_error
+            + regulator.d_gain * derivative_error;
+
+        for axis in 0..3 {
+            if error_abs[axis] > 0.0 {
+                let group = if error[axis] > 0.0 {
+                    ThrusterGroup::positive_rotation(axis)
+                } else {
+                    ThrusterGroup::negative_rotation(axis)
+                };
+                groups_to_fire |= group;
+                thrusters.group_thrust[group.index()] = thrust[axis];
             }
         }
 
-        if y_error_abs > 0.0 {
-            let y_thrust = regulator.gain * y_error_abs;
-            if y_error > 0.0 {
-                groups_to_fire |= ThrusterGroup::YROT;
-                thrusters.group_thrust[ThrusterGroup::YROT.index()] = y_thrust;
-            } else {
-                groups_to_fire |= ThrusterGroup::NYROT;
-                thrusters.group_thrust[ThrusterGroup::NYROT.index()] = y_thrust;
-            }
-        }
-
-        if z_error_abs > 0.0 {
-            let z_thrust = regulator.gain * z_error_abs;
-            if z_error > 0.0 {
-                groups_to_fire |= ThrusterGroup::ZROT;
-                thrusters.group_thrust[ThrusterGroup::ZROT.index()] = z_thrust;
-            } else {
-                groups_to_fire |= ThrusterGroup::NZROT;
-                thrusters.group_thrust[ThrusterGroup::NZROT.index()] = z_thrust;
-            }
-        }
+        regulator.prev_error = error;
 
         thrusters.groups_to_fire |= groups_to_fire;
     }
