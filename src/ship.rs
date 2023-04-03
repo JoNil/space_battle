@@ -132,8 +132,8 @@ pub fn orientation_regulator(
     mut query: Query<(&Transform, &mut Thrusters, &mut OrientationRegulator)>,
     mut lines: ResMut<DebugLines>,
 ) {
-    if enable {
-        for (transfrom, mut thrusters, mut regulator) in query.iter_mut() {
+    for (transfrom, mut thrusters, mut regulator) in query.iter_mut() {
+        if regulator.enable {
             let mut groups_to_fire = ThrusterGroup::NONE;
 
             let differense = regulator.target * transfrom.rotation.inverse();
