@@ -1,17 +1,13 @@
 use bevy::{
     diagnostic::FrameTimeDiagnosticsPlugin,
-    math::{Quat, Vec3},
+    math::{vec3, Quat, Vec3},
     pbr::PointLightBundle,
     prelude::{
-        shape, AssetServer, Assets, Color, CoreSet, IntoSystemConfig, Mesh, PbrBundle,
+        shape, AssetServer, Assets, Color, CoreSet, IntoSystemConfig, Mesh, Name, PbrBundle,
         StandardMaterial,
     },
-    prelude::{
-        App, BuildChildren, Camera3dBundle, Commands, ComputedVisibility, Msaa, Res, ResMut,
-        Transform, Visibility,
-    },
+    prelude::{App, BuildChildren, Camera3dBundle, Commands, Msaa, Res, ResMut, Transform},
     scene::SceneBundle,
-    transform::TransformBundle,
     DefaultPlugins,
 };
 use bevy_editor_pls::{AddEditorWindow, EditorPlugin};
@@ -64,8 +60,11 @@ fn main() {
 
 fn add_test_objects(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
-        .spawn_empty()
-        .insert(TransformBundle::from(Transform::from_xyz(0.0, 0.0, 0.0)))
+        .spawn(SceneBundle {
+            scene: asset_server.load("models/space_ship/scene.gltf#Scene0"),
+            ..Default::default()
+        })
+        .insert(Name::new("Player"))
         .insert(RigidBody::Dynamic)
         .insert(GravityScale(0.0))
         .insert(AdditionalMassProperties::Mass(100.0))
@@ -192,13 +191,7 @@ fn add_test_objects(mut commands: Commands, asset_server: Res<AssetServer>) {
         })
         .insert(PlayerShip)
         .insert(OrientationRegulator::default())
-        .insert(Visibility::default())
-        .insert(ComputedVisibility::default())
         .with_children(|p| {
-            p.spawn(SceneBundle {
-                scene: asset_server.load("models/space_ship/scene.gltf#Scene0"),
-                ..Default::default()
-            });
             p.spawn(Camera3dBundle {
                 transform: Transform::from_translation(Vec3::new(0.0, 1.0, 8.0))
                     .looking_at(Vec3::default(), Vec3::Y),
@@ -210,6 +203,14 @@ fn add_test_objects(mut commands: Commands, asset_server: Res<AssetServer>) {
         transform: Transform::from_translation(Vec3::new(0.0, 5.0, 5.0)),
         ..Default::default()
     });
+
+    commands
+        .spawn(SceneBundle {
+            scene: asset_server.load("models/background_1.glb#Scene0"),
+            transform: Transform::from_scale(vec3(100.0, 100.0, 100.0)),
+            ..Default::default()
+        })
+        .insert(Name::new("Background"));
 }
 
 pub fn setup_physics(
