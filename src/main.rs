@@ -58,7 +58,11 @@ fn main() {
         .run();
 }
 
-fn add_test_objects(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn add_test_objects(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
     commands
         .spawn(SceneBundle {
             scene: asset_server.load("models/space_ship/scene.gltf#Scene0"),
@@ -205,9 +209,13 @@ fn add_test_objects(mut commands: Commands, asset_server: Res<AssetServer>) {
     });
 
     commands
-        .spawn(SceneBundle {
-            scene: asset_server.load("models/background_1.glb#Scene0"),
-            transform: Transform::from_scale(vec3(100.0, 100.0, 100.0)),
+        .spawn(PbrBundle {
+            mesh: asset_server.load("models/background_1.glb#Mesh0/Primitive0"),
+            material: materials.add(StandardMaterial {
+                unlit: true,
+                ..Default::default()
+            }),
+            transform: Transform::from_scale(vec3(1000.0, 1000.0, 1000.0)),
             ..Default::default()
         })
         .insert(Name::new("Background"));
