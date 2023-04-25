@@ -1,7 +1,9 @@
 use bevy::{
     input::Input,
     math::{vec3, Quat, Vec3},
-    prelude::{Color, Component, KeyCode, Query, ReflectComponent, Res, ResMut, Transform},
+    prelude::{
+        Color, Component, EulerRot, KeyCode, Query, ReflectComponent, Res, ResMut, Transform,
+    },
     reflect::{FromReflect, Reflect, ReflectDeserialize, ReflectSerialize},
     time::Time,
 };
@@ -116,6 +118,7 @@ pub struct OrientationRegulator {
     prev_error: Vec3,
     integral_error: Vec3,
     enable: bool,
+    angle_mode: bool,
 }
 
 impl Default for OrientationRegulator {
@@ -130,6 +133,7 @@ impl Default for OrientationRegulator {
             prev_error: Vec3::ZERO,
             integral_error: Vec3::ZERO,
             enable: true,
+            angle_mode: false,
         }
     }
 }
@@ -141,19 +145,27 @@ fn calculate_target_angular_velocity(
     max_torque: f32,
     angular_inertia: f32,
 ) -> f32 {
+    // 1. Calculate angular displacement
     let delta_theta = target_angle - angle;
 
-    let alpha = if delta_theta.abs() > f32::EPSILON {
-        angular_velocity.powi(2) / (2.0 * delta_theta)
-    } else {
-        0.0
-    };
+    // 2. Calculate the remaining time to reach the target angle
+    let angular_acceleration_due_to_max_torque = max_torque / angular_inertia;
+    let remaining_time = (2.0 * delta_theta / angular_acceleration_due_to_max_torque)
+        .abs()
+        .sqrt();
 
-    let desired_torque = angular_inertia * alpha;
+    // 3. Calculate the required angular acceleration to achieve the angular displacement in the remaining time
+    let required_angular_acceleration = 2.0 * delta_theta / (remaining_time * remaining_time);
+
+    // 4. Calculate the torque needed to achieve the required angular acceleration, considering the maximum torque and the moment of inertia
+    let desired_torque = angular_inertia * required_angular_acceleration;
     let applied_torque = desired_torque.clamp(-max_torque, max_torque);
 
+    // Update the target angular velocity based on the calculated torque and the current angular velocity
     let delta_angular_velocity = applied_torque / angular_inertia;
-    angular_velocity - delta_angular_velocity
+    let target_angular_velocity = angular_velocity + delta_angular_velocity;
+
+    target_angular_velocity
 }
 
 pub fn reset_thrusters(mut query: Query<&mut Thrusters>) {
@@ -209,14 +221,27 @@ pub fn orientation_regulator(
         &Transform,
         &Velocity,
         &ReadMassProperties,
+        &MaxTorque,
         &mut Thrusters,
         &mut OrientationRegulator,
     )>,
     mut lines: ResMut<DebugLines>,
 ) {
-    for (transform, vel, mass_props, mut thrusters, mut regulator) in query.iter_mut() {
+    for (transform, vel, mass_props, max_torque, mut thrusters, mut regulator) in query.iter_mut() {
         regulator.local_angvel = transform.rotation.inverse().mul_vec3(vel.angvel);
         if regulator.enable {
+            if regulator.angle_mode {
+                let angle = transform.rotation.to_euler(EulerRot::XYZ);
+
+                regulator.target_angvel.y = calculate_target_angular_velocity(
+                    regulator.target.y,
+                    angle.1,
+                    regulator.local_angvel.y,
+                    max_torque.negative_torque.y,
+                    mass_props.0.principal_inertia.y,
+                );
+            }
+
             let mut groups_to_fire = ThrusterGroup::NONE;
             let error = regulator.target_angvel - regulator.local_angvel;
 
