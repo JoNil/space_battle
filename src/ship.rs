@@ -138,8 +138,28 @@ pub fn reset_thrusters(mut query: Query<&mut Thrusters>) {
 }
 
 pub fn update_max_torque(mut query: Query<(&Thrusters, &mut MaxTorque)>) {
-    for (thrusters, max_torque) in query.iter_mut() {
-        for thruster in &thrusters.thrusters {}
+    for (thrusters, mut max_torque) in query.iter_mut() {
+        let max_torque = &mut max_torque.as_mut().max_torque;
+
+        for thruster in &thrusters.thrusters {
+            let local_force = thruster
+                .direction
+                .mul_vec3(thruster.thrust * vec3(0.0, 0.0, 1.0));
+
+            let torque = thruster.offset.cross(local_force);
+
+            if torque.x > 0.0 {
+                max_torque.x += torque.x;
+            }
+
+            if torque.y > 0.0 {
+                max_torque.y += torque.x;
+            }
+
+            if torque.z > 0.0 {
+                max_torque.z += torque.z;
+            }
+        }
     }
 }
 
