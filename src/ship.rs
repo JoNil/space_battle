@@ -97,6 +97,7 @@ pub struct Thrusters {
 pub struct OrientationRegulator {
     target: Quat,
     target_angvel: Vec3,
+    local_angvel: Vec3,
     p_gain: f32,
     i_gain: f32,
     d_gain: f32,
@@ -110,6 +111,7 @@ impl Default for OrientationRegulator {
         Self {
             target: Default::default(),
             target_angvel: Default::default(),
+            local_angvel: Default::default(),
             p_gain: 10.0,
             i_gain: 0.0,
             d_gain: 0.0,
@@ -131,14 +133,19 @@ pub fn reset_thrusters(mut query: Query<&mut Thrusters>) {
 
 pub fn orientation_regulator(
     time: Res<Time>,
-    mut query: Query<(&Velocity, &mut Thrusters, &mut OrientationRegulator)>,
+    mut query: Query<(
+        &Transform,
+        &Velocity,
+        &mut Thrusters,
+        &mut OrientationRegulator,
+    )>,
     mut lines: ResMut<DebugLines>,
 ) {
-    for (vel, mut thrusters, mut regulator) in query.iter_mut() {
+    for (transform, vel, mut thrusters, mut regulator) in query.iter_mut() {
+        regulator.local_angvel = transform.rotation.inverse().mul_vec3(vel.angvel);
         if regulator.enable {
             let mut groups_to_fire = ThrusterGroup::NONE;
-
-            let error = regulator.target_angvel - vel.angvel;
+            let error = regulator.target_angvel - regulator.local_angvel;
 
             let error_abs = error.abs();
 
