@@ -6,7 +6,7 @@ use bevy::{
     time::Time,
 };
 use bevy_prototype_debug_lines::DebugLines;
-use bevy_rapier3d::prelude::{ExternalForce, ReadMassProperties};
+use bevy_rapier3d::prelude::{ExternalForce, ReadMassProperties, Velocity};
 use serde::{Deserialize, Serialize};
 use std::ops::{BitOr, BitOrAssign};
 
@@ -96,6 +96,7 @@ pub struct Thrusters {
 #[reflect(Component, Serialize, Deserialize)]
 pub struct OrientationRegulator {
     target: Quat,
+    target_angvel: Vec3,
     p_gain: f32,
     i_gain: f32,
     d_gain: f32,
@@ -108,9 +109,10 @@ impl Default for OrientationRegulator {
     fn default() -> Self {
         Self {
             target: Default::default(),
-            p_gain: 1.0,
-            i_gain: 0.5,
-            d_gain: 1.0,
+            target_angvel: Default::default(),
+            p_gain: 10.0,
+            i_gain: 0.0,
+            d_gain: 0.0,
             prev_error: Vec3::ZERO,
             integral_error: Vec3::ZERO,
             enable: true,
@@ -129,35 +131,14 @@ pub fn reset_thrusters(mut query: Query<&mut Thrusters>) {
 
 pub fn orientation_regulator(
     time: Res<Time>,
-    mut query: Query<(&Transform, &mut Thrusters, &mut OrientationRegulator)>,
+    mut query: Query<(&Velocity, &mut Thrusters, &mut OrientationRegulator)>,
     mut lines: ResMut<DebugLines>,
 ) {
-    for (transfrom, mut thrusters, mut regulator) in query.iter_mut() {
+    for (vel, mut thrusters, mut regulator) in query.iter_mut() {
         if regulator.enable {
             let mut groups_to_fire = ThrusterGroup::NONE;
 
-            let differense = regulator.target * transfrom.rotation.inverse();
-            let differense = differense.to_axis_angle();
-
-            lines.line_colored(
-                transfrom.translation,
-                transfrom.translation + regulator.target.mul_vec3(vec3(0.0, 0.0, -3.0)),
-                0.0,
-                Color::YELLOW,
-            );
-
-            lines.line_colored(
-                transfrom.translation,
-                transfrom.translation + transfrom.rotation.mul_vec3(vec3(0.0, 0.0, -3.0)),
-                0.0,
-                Color::BLUE,
-            );
-
-            let error = Vec3::new(
-                differense.0.x * differense.1,
-                differense.0.y * differense.1,
-                differense.0.z * differense.1,
-            );
+            let error = regulator.target_angvel - vel.angvel;
 
             let error_abs = error.abs();
 
