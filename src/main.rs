@@ -78,7 +78,7 @@ fn add_test_objects(
         .insert(ExternalForce::default())
         .insert(Velocity::default())
         .insert(Sleeping::disabled())
-        .insert(Collider::cuboid(1.0, 1.0, 3.0))
+        .insert(Collider::cuboid(1.0, 1.0, 4.0))
         .insert(Thrusters {
             thrusters: Vec::from([
                 Thruster {
