@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 bevy = { version = "0.10", features = ["jpeg"] }
-bevy_editor_pls = "0.3"
+bevy_editor_pls = "0.4"
 bevy_prototype_debug_lines = { version = "0.10", features = ["3d"] }
 bevy_rapier3d = { version = "0.21", features = ["parallel", "simd-stable"] }
 rapier3d = { version = "0.17", features = ["profiler"] }

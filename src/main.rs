@@ -21,7 +21,8 @@ use bevy_rapier3d::{
 };
 use ship::{
     debug_thruster, orientation_regulator, player_thrusters, reset_thrusters, thrusters,
-    OrientationRegulator, PlayerShip, Thruster, ThrusterGroup, Thrusters,
+    update_max_torque, MaxTorque, OrientationRegulator, PlayerShip, Thruster, ThrusterGroup,
+    Thrusters,
 };
 use std::f32::consts::PI;
 use ui::physics_debug_panel::PhysicsProfilingPanel;
@@ -33,7 +34,7 @@ fn main() {
     App::new()
         .insert_resource(Msaa::Sample4)
         .add_plugins(DefaultPlugins)
-        .add_plugin(EditorPlugin)
+        .add_plugin(EditorPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierDebugRenderPlugin {
@@ -43,6 +44,7 @@ fn main() {
         })
         .add_plugin(DebugLinesPlugin::default())
         .add_system(reset_thrusters.in_base_set(CoreSet::PreUpdate))
+        .add_system(update_max_torque.in_base_set(CoreSet::PreUpdate))
         .add_system(orientation_regulator)
         .add_system(player_thrusters)
         .add_system(thrusters)
@@ -76,7 +78,7 @@ fn add_test_objects(
         .insert(ExternalForce::default())
         .insert(Velocity::default())
         .insert(Sleeping::disabled())
-        .insert(Collider::cuboid(1.0, 1.0, 1.0))
+        .insert(Collider::cuboid(1.0, 1.0, 3.0))
         .insert(Thrusters {
             thrusters: Vec::from([
                 Thruster {
@@ -195,6 +197,7 @@ fn add_test_objects(
             ..Default::default()
         })
         .insert(PlayerShip)
+        .insert(MaxTorque::default())
         .insert(OrientationRegulator::default())
         .with_children(|p| {
             p.spawn(Camera3dBundle {

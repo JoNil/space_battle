@@ -92,6 +92,12 @@ pub struct Thrusters {
     pub groups_to_fire: ThrusterGroup,
 }
 
+#[derive(Component, Default, Reflect, Serialize, Deserialize)]
+#[reflect(Component, Serialize, Deserialize)]
+pub struct MaxTorque {
+    max_torque: Vec3,
+}
+
 #[derive(Component, Reflect, Serialize, Deserialize)]
 #[reflect(Component, Serialize, Deserialize)]
 pub struct OrientationRegulator {
@@ -128,6 +134,12 @@ pub fn reset_thrusters(mut query: Query<&mut Thrusters>) {
         for i in 0..12 {
             thrusters.group_thrust[i] = 0.0;
         }
+    }
+}
+
+pub fn update_max_torque(mut query: Query<(&Thrusters, &mut MaxTorque)>) {
+    for (thrusters, max_torque) in query.iter_mut() {
+        for thruster in &thrusters.thrusters {}
     }
 }
 
