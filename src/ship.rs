@@ -133,6 +133,28 @@ impl Default for OrientationRegulator {
         }
     }
 }
+// https://chat.openai.com/c/1bc5a952-eb65-4f1b-8849-323d84036579
+fn calculate_target_angular_velocity(
+    target_angle: f32,
+    angle: f32,
+    angular_velocity: f32,
+    max_torque: f32,
+    angular_inertia: f32,
+) -> f32 {
+    let delta_theta = target_angle - angle;
+
+    let alpha = if delta_theta.abs() > f32::EPSILON {
+        angular_velocity.powi(2) / (2.0 * delta_theta)
+    } else {
+        0.0
+    };
+
+    let desired_torque = angular_inertia * alpha;
+    let applied_torque = desired_torque.clamp(-max_torque, max_torque);
+
+    let delta_angular_velocity = applied_torque / angular_inertia;
+    angular_velocity - delta_angular_velocity
+}
 
 pub fn reset_thrusters(mut query: Query<&mut Thrusters>) {
     for mut thrusters in query.iter_mut() {
