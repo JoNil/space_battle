@@ -15,7 +15,8 @@ use bevy_prototype_debug_lines::DebugLinesPlugin;
 use bevy_rapier3d::{
     prelude::{
         AdditionalMassProperties, Collider, ExternalForce, GravityScale, NoUserData,
-        RapierPhysicsPlugin, ReadMassProperties, RigidBody, Sleeping, Velocity,
+        RapierColliderHandle, RapierPhysicsPlugin, RapierRigidBodyHandle, ReadMassProperties,
+        RigidBody, Sleeping, Velocity,
     },
     render::RapierDebugRenderPlugin,
 };
@@ -57,6 +58,7 @@ fn main() {
         .register_type::<Thrusters>()
         .register_type::<MaxTorque>()
         .register_type::<OrientationRegulator>()
+        .register_type::<ReadMassProperties>()
         .add_editor_window::<PhysicsProfilingPanel>()
         .run();
 }

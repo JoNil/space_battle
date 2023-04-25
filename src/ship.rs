@@ -186,12 +186,13 @@ pub fn orientation_regulator(
     mut query: Query<(
         &Transform,
         &Velocity,
+        &ReadMassProperties,
         &mut Thrusters,
         &mut OrientationRegulator,
     )>,
     mut lines: ResMut<DebugLines>,
 ) {
-    for (transform, vel, mut thrusters, mut regulator) in query.iter_mut() {
+    for (transform, vel, mass_props, mut thrusters, mut regulator) in query.iter_mut() {
         regulator.local_angvel = transform.rotation.inverse().mul_vec3(vel.angvel);
         if regulator.enable {
             let mut groups_to_fire = ThrusterGroup::NONE;
