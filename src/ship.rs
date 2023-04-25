@@ -88,14 +88,19 @@ pub struct Thruster {
 #[reflect(Component, Serialize, Deserialize)]
 pub struct Thrusters {
     pub thrusters: Vec<Thruster>,
+    #[serde(skip_serializing)]
     pub group_thrust: [f32; 12],
+    #[serde(skip_serializing)]
     pub groups_to_fire: ThrusterGroup,
 }
 
 #[derive(Component, Default, Reflect, Serialize, Deserialize)]
 #[reflect(Component, Serialize, Deserialize)]
 pub struct MaxTorque {
-    max_torque: Vec3,
+    #[serde(skip_serializing)]
+    positive_torque: Vec3,
+    #[serde(skip_serializing)]
+    negative_torque: Vec3,
 }
 
 #[derive(Component, Reflect, Serialize, Deserialize)]
@@ -103,6 +108,7 @@ pub struct MaxTorque {
 pub struct OrientationRegulator {
     target: Quat,
     target_angvel: Vec3,
+    #[serde(skip_serializing)]
     local_angvel: Vec3,
     p_gain: f32,
     i_gain: f32,
@@ -139,7 +145,13 @@ pub fn reset_thrusters(mut query: Query<&mut Thrusters>) {
 
 pub fn update_max_torque(mut query: Query<(&Thrusters, &mut MaxTorque)>) {
     for (thrusters, mut max_torque) in query.iter_mut() {
-        let max_torque = &mut max_torque.as_mut().max_torque;
+        let max_torque = max_torque.as_mut();
+
+        let positive_torque = &mut max_torque.positive_torque;
+        *positive_torque = Vec3::ZERO;
+
+        let negative_torque = &mut max_torque.negative_torque;
+        *negative_torque = Vec3::ZERO;
 
         for thruster in &thrusters.thrusters {
             let local_force = thruster
@@ -149,15 +161,21 @@ pub fn update_max_torque(mut query: Query<(&Thrusters, &mut MaxTorque)>) {
             let torque = thruster.offset.cross(local_force);
 
             if torque.x > 0.0 {
-                max_torque.x += torque.x;
+                positive_torque.x += torque.x;
+            } else {
+                negative_torque.x += torque.x.abs();
             }
 
             if torque.y > 0.0 {
-                max_torque.y += torque.x;
+                positive_torque.y += torque.y;
+            } else {
+                negative_torque.y += torque.y.abs();
             }
 
             if torque.z > 0.0 {
-                max_torque.z += torque.z;
+                positive_torque.z += torque.z;
+            } else {
+                negative_torque.z += torque.z.abs();
             }
         }
     }

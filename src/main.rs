@@ -55,6 +55,7 @@ fn main() {
         .register_type::<PlayerShip>()
         .register_type::<Thruster>()
         .register_type::<Thrusters>()
+        .register_type::<MaxTorque>()
         .register_type::<OrientationRegulator>()
         .add_editor_window::<PhysicsProfilingPanel>()
         .run();
