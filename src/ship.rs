@@ -2,7 +2,7 @@ use bevy::{
     input::Input,
     math::{vec3, Quat, Vec3},
     prelude::{
-        Color, Component, EulerRot, Gizmos, KeyCode, Query, ReflectComponent, Res, Transform,
+        info, Color, Component, EulerRot, Gizmos, KeyCode, Query, ReflectComponent, Res, Transform,
     },
     reflect::{Reflect, ReflectDeserialize, ReflectSerialize},
     time::Time,
@@ -11,7 +11,7 @@ use bevy_rapier3d::prelude::{ExternalForce, ReadMassProperties, Velocity};
 use serde::{Deserialize, Serialize};
 use std::ops::{BitOr, BitOrAssign};
 
-#[derive(Copy, Clone, Default, Reflect, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Default, Reflect, Serialize, Deserialize)]
 #[reflect(Serialize, Deserialize)]
 pub struct ThrusterGroup(u32);
 

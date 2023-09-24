@@ -4,8 +4,8 @@ use bevy::{
     pbr::PointLightBundle,
     prelude::{shape, AssetServer, Assets, Color, Mesh, Name, PbrBundle, StandardMaterial},
     prelude::{
-        App, BuildChildren, Camera3dBundle, Commands, Msaa, PreUpdate, Res, ResMut, Startup,
-        Transform, Update,
+        App, BuildChildren, Camera3dBundle, Commands, IntoSystemConfigs, Msaa, Res, ResMut,
+        Startup, Transform, Update,
     },
     scene::SceneBundle,
     DefaultPlugins,
@@ -42,12 +42,16 @@ fn main() {
         })
         .add_systems(Startup, add_test_objects)
         .add_systems(Startup, setup_physics)
-        .add_systems(PreUpdate, reset_thrusters)
-        .add_systems(PreUpdate, update_max_torque)
-        .add_systems(Update, orientation_regulator)
-        .add_systems(Update, player_thrusters)
-        .add_systems(Update, thrusters)
-        .add_systems(Update, debug_thruster)
+        .add_systems(
+            Update,
+            (
+                (reset_thrusters, update_max_torque),
+                (player_thrusters, orientation_regulator),
+                thrusters,
+                debug_thruster,
+            )
+                .chain(),
+        )
         .register_type::<ThrusterGroup>()
         .register_type::<PlayerShip>()
         .register_type::<Thruster>()
