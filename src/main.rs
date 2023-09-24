@@ -70,7 +70,7 @@ fn add_test_objects(
 ) {
     commands
         .spawn(SceneBundle {
-            scene: asset_server.load("models/space_ship/scene.gltf#Scene0"),
+            scene: asset_server.load("models/ship.glb#Scene0"),
             ..Default::default()
         })
         .insert(Name::new("Player"))
