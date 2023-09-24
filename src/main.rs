@@ -69,8 +69,9 @@ fn add_test_objects(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     commands
-        .spawn(SceneBundle {
-            scene: asset_server.load("models/ship.glb#Scene0"),
+        .spawn(PbrBundle {
+            mesh: asset_server.load("models/ship.glb#Mesh0/Primitive0"),
+            material: asset_server.load("models/ship.glb#Material0"),
             ..Default::default()
         })
         .insert(Name::new("Player"))
