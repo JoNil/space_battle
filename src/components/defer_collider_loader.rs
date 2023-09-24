@@ -13,10 +13,7 @@ pub fn defer_collider_loader(
     //let m = &meshes.get(&x_shape);
 
     for (e, _, m) in query.iter() {
-        info!("CHECK!");
         if let LoadState::Loaded = server.get_load_state(m) {
-            info!("Loaded!");
-
             let collider = Collider::from_bevy_mesh(
                 meshes.get(m).unwrap(),
                 &ComputedColliderShape::ConvexDecomposition(Default::default()),
