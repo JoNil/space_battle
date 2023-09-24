@@ -7,7 +7,6 @@ use bevy::{
         App, BuildChildren, Camera3dBundle, Commands, IntoSystemConfigs, Msaa, Res, ResMut,
         Startup, Transform, Update,
     },
-    scene::SceneBundle,
     DefaultPlugins,
 };
 use bevy_editor_pls::{AddEditorWindow, EditorPlugin};
@@ -18,6 +17,7 @@ use bevy_rapier3d::{
     },
     render::RapierDebugRenderPlugin,
 };
+use components::defer_collider_loader::{defer_collider_loader, DeferColliderLoader};
 use ship::{
     debug_thruster, orientation_regulator, player_thrusters, reset_thrusters, thrusters,
     update_max_torque, MaxTorque, OrientationRegulator, PlayerShip, Thruster, ThrusterGroup,
@@ -26,6 +26,7 @@ use ship::{
 use std::f32::consts::PI;
 use ui::physics_debug_panel::PhysicsProfilingPanel;
 
+mod components;
 mod ship;
 mod ui;
 
@@ -45,12 +46,15 @@ fn main() {
         .add_systems(
             Update,
             (
-                (reset_thrusters, update_max_torque),
-                (player_thrusters, orientation_regulator),
-                thrusters,
-                debug_thruster,
-            )
-                .chain(),
+                (
+                    (reset_thrusters, update_max_torque),
+                    (player_thrusters, orientation_regulator),
+                    thrusters,
+                    debug_thruster,
+                )
+                    .chain(),
+                defer_collider_loader,
+            ),
         )
         .register_type::<ThrusterGroup>()
         .register_type::<PlayerShip>()
@@ -59,6 +63,7 @@ fn main() {
         .register_type::<MaxTorque>()
         .register_type::<OrientationRegulator>()
         .register_type::<ReadMassProperties>()
+        .register_type::<DeferColliderLoader>()
         .add_editor_window::<PhysicsProfilingPanel>()
         .run();
 }
@@ -75,6 +80,7 @@ fn add_test_objects(
             ..Default::default()
         })
         .insert(Name::new("Player"))
+        .insert(DeferColliderLoader)
         .insert(RigidBody::Dynamic)
         .insert(GravityScale(0.0))
         .insert(AdditionalMassProperties::Mass(100.0))
@@ -82,7 +88,6 @@ fn add_test_objects(
         .insert(ExternalForce::default())
         .insert(Velocity::default())
         .insert(Sleeping::disabled())
-        .insert(Collider::cuboid(1.0, 1.0, 4.0))
         .insert(Thrusters {
             thrusters: Vec::from([
                 Thruster {
