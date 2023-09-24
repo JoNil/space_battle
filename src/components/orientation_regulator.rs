@@ -1,5 +1,5 @@
 use bevy::{math::vec3, prelude::*};
-use bevy_rapier3d::prelude::{ReadMassProperties, Velocity};
+use bevy_rapier3d::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -66,9 +66,8 @@ fn calculate_target_angular_velocity(
 
     // Update the target angular velocity based on the calculated torque and the current angular velocity
     let delta_angular_velocity = applied_torque / angular_inertia;
-    let target_angular_velocity = angular_velocity + delta_angular_velocity;
 
-    target_angular_velocity
+    angular_velocity + delta_angular_velocity
 }
 
 pub fn orientation_regulator(

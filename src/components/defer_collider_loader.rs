@@ -1,5 +1,5 @@
 use bevy::{asset::LoadState, prelude::*};
-use bevy_rapier3d::prelude::{Collider, ComputedColliderShape};
+use bevy_rapier3d::prelude::*;
 
 #[derive(Debug, Default, Reflect, Component)]
 pub struct DeferColliderLoader;

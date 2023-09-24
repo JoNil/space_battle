@@ -1,22 +1,6 @@
-use bevy::{
-    diagnostic::FrameTimeDiagnosticsPlugin,
-    math::{vec3, Quat, Vec3},
-    pbr::PointLightBundle,
-    prelude::{shape, AssetServer, Assets, Color, Mesh, Name, PbrBundle, StandardMaterial},
-    prelude::{
-        App, BuildChildren, Camera3dBundle, Commands, IntoSystemConfigs, Msaa, Res, ResMut,
-        Startup, Transform, Update,
-    },
-    DefaultPlugins,
-};
+use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, math::vec3, prelude::*};
 use bevy_editor_pls::{AddEditorWindow, EditorPlugin};
-use bevy_rapier3d::{
-    prelude::{
-        AdditionalMassProperties, Collider, ExternalForce, GravityScale, NoUserData,
-        RapierPhysicsPlugin, ReadMassProperties, RigidBody, Sleeping, Velocity,
-    },
-    render::RapierDebugRenderPlugin,
-};
+use bevy_rapier3d::{prelude::*, render::RapierDebugRenderPlugin};
 use components::{
     defer_collider_loader::{defer_collider_loader, DeferColliderLoader},
     max_torque::{update_max_torque, MaxTorque},
