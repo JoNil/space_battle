@@ -17,17 +17,17 @@ use bevy_rapier3d::{
     },
     render::RapierDebugRenderPlugin,
 };
-use components::defer_collider_loader::{defer_collider_loader, DeferColliderLoader};
-use ship::{
-    debug_thruster, orientation_regulator, player_thrusters, reset_thrusters, thrusters,
-    update_max_torque, MaxTorque, OrientationRegulator, PlayerShip, Thruster, ThrusterGroup,
-    Thrusters,
+use components::{
+    defer_collider_loader::{defer_collider_loader, DeferColliderLoader},
+    max_torque::{update_max_torque, MaxTorque},
+    orientation_regulator::{orientation_regulator, OrientationRegulator},
+    player_ship::{player_thrusters, PlayerShip},
+    thrusters::{debug_thruster, reset_thrusters, thrusters, Thruster, ThrusterGroup, Thrusters},
 };
 use std::f32::consts::PI;
 use ui::physics_debug_panel::PhysicsProfilingPanel;
 
 mod components;
-mod ship;
 mod ui;
 
 fn main() {

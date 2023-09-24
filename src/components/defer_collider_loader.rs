@@ -10,13 +10,11 @@ pub fn defer_collider_loader(
     server: Res<AssetServer>,
     query: Query<(Entity, &DeferColliderLoader, &Handle<Mesh>)>,
 ) {
-    //let m = &meshes.get(&x_shape);
-
     for (e, _, m) in query.iter() {
         if let LoadState::Loaded = server.get_load_state(m) {
             let collider = Collider::from_bevy_mesh(
                 meshes.get(m).unwrap(),
-                &ComputedColliderShape::ConvexDecomposition(Default::default()),
+                &ComputedColliderShape::ConvexHull,
             )
             .unwrap();
 
