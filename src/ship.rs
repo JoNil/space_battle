@@ -2,17 +2,16 @@ use bevy::{
     input::Input,
     math::{vec3, Quat, Vec3},
     prelude::{
-        Color, Component, EulerRot, KeyCode, Query, ReflectComponent, Res, ResMut, Transform,
+        Color, Component, EulerRot, Gizmos, KeyCode, Query, ReflectComponent, Res, Transform,
     },
-    reflect::{FromReflect, Reflect, ReflectDeserialize, ReflectSerialize},
+    reflect::{Reflect, ReflectDeserialize, ReflectSerialize},
     time::Time,
 };
-use bevy_prototype_debug_lines::DebugLines;
 use bevy_rapier3d::prelude::{ExternalForce, ReadMassProperties, Velocity};
 use serde::{Deserialize, Serialize};
 use std::ops::{BitOr, BitOrAssign};
 
-#[derive(Copy, Clone, Default, Reflect, FromReflect, Serialize, Deserialize)]
+#[derive(Copy, Clone, Default, Reflect, Serialize, Deserialize)]
 #[reflect(Serialize, Deserialize)]
 pub struct ThrusterGroup(u32);
 
@@ -77,7 +76,7 @@ impl BitOr for ThrusterGroup {
 #[reflect(Component, Serialize, Deserialize)]
 pub struct PlayerShip;
 
-#[derive(Reflect, FromReflect, Serialize, Deserialize, Default)]
+#[derive(Reflect, Serialize, Deserialize, Default)]
 #[reflect(Serialize, Deserialize)]
 pub struct Thruster {
     pub offset: Vec3,
@@ -225,7 +224,6 @@ pub fn orientation_regulator(
         &mut Thrusters,
         &mut OrientationRegulator,
     )>,
-    mut lines: ResMut<DebugLines>,
 ) {
     for (transform, vel, mass_props, max_torque, mut thrusters, mut regulator) in query.iter_mut() {
         regulator.local_angvel = transform.rotation.inverse().mul_vec3(vel.angvel);
@@ -301,7 +299,7 @@ pub fn player_thrusters(
         groups_to_fire |= ThrusterGroup::UP;
     }
 
-    if keyboard.pressed(KeyCode::LShift) {
+    if keyboard.pressed(KeyCode::ShiftLeft) {
         groups_to_fire |= ThrusterGroup::DOWN;
     }
 
@@ -341,7 +339,7 @@ pub fn thrusters(
         &mut ExternalForce,
         &ReadMassProperties,
     )>,
-    mut lines: ResMut<DebugLines>,
+    mut gizmos: Gizmos,
 ) {
     for (transform, thrusters, mut forces, mass_props) in query.iter_mut() {
         *forces = ExternalForce::default();
@@ -372,44 +370,42 @@ pub fn thrusters(
 
             *forces += ExternalForce::at_point(force, pos, center_of_mass);
 
-            lines.line_colored(
+            gizmos.line(
                 pos,
                 pos + 0.4 * -(magnitude * force.normalize()),
-                0.0,
                 Color::RED,
             );
         }
 
         {
             let center_of_mass = transform.transform_point(mass_props.0.local_center_of_mass);
-            lines.line_colored(
+            gizmos.line(
                 center_of_mass,
                 center_of_mass + vec3(0.0, 0.3, 0.0),
-                0.0,
                 Color::GREEN,
             );
         }
     }
 }
 
-pub fn debug_thruster(query: Query<(&Transform, &Thrusters)>, mut lines: ResMut<DebugLines>) {
+pub fn debug_thruster(query: Query<(&Transform, &Thrusters)>, mut gizmos: Gizmos) {
     for (transform, thrusters) in query.iter() {
         for thruster in &thrusters.thrusters {
             let pos = transform.transform_point(thruster.offset);
             let orientation = (transform.rotation * thruster.direction).mul_vec3(-Vec3::Z);
             let end = pos + 0.3 * orientation;
-            lines.line(pos, end, 0.0);
+            gizmos.line(pos, end, Color::BLUE);
 
             let local_x = transform.rotation * Vec3::X;
             let local_y = transform.rotation * Vec3::Y;
             let local_z = transform.rotation * Vec3::Z;
 
-            lines.line(pos, pos + 0.1 * local_x, 0.0);
-            lines.line(pos, pos - 0.1 * local_x, 0.0);
-            lines.line(pos, pos + 0.1 * local_y, 0.0);
-            lines.line(pos, pos - 0.1 * local_y, 0.0);
-            lines.line(pos, pos + 0.1 * local_z, 0.0);
-            lines.line(pos, pos - 0.1 * local_z, 0.0);
+            gizmos.line(pos, pos + 0.1 * local_x, Color::BLUE);
+            gizmos.line(pos, pos - 0.1 * local_x, Color::BLUE);
+            gizmos.line(pos, pos + 0.1 * local_y, Color::BLUE);
+            gizmos.line(pos, pos - 0.1 * local_y, Color::BLUE);
+            gizmos.line(pos, pos + 0.1 * local_z, Color::BLUE);
+            gizmos.line(pos, pos - 0.1 * local_z, Color::BLUE);
         }
     }
 }

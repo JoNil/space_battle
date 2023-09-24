@@ -2,21 +2,19 @@ use bevy::{
     diagnostic::FrameTimeDiagnosticsPlugin,
     math::{vec3, Quat, Vec3},
     pbr::PointLightBundle,
+    prelude::{shape, AssetServer, Assets, Color, Mesh, Name, PbrBundle, StandardMaterial},
     prelude::{
-        shape, AssetServer, Assets, Color, CoreSet, IntoSystemConfig, Mesh, Name, PbrBundle,
-        StandardMaterial,
+        App, BuildChildren, Camera3dBundle, Commands, Msaa, PreUpdate, Res, ResMut, Startup,
+        Transform, Update,
     },
-    prelude::{App, BuildChildren, Camera3dBundle, Commands, Msaa, Res, ResMut, Transform},
     scene::SceneBundle,
     DefaultPlugins,
 };
 use bevy_editor_pls::{AddEditorWindow, EditorPlugin};
-use bevy_prototype_debug_lines::DebugLinesPlugin;
 use bevy_rapier3d::{
     prelude::{
         AdditionalMassProperties, Collider, ExternalForce, GravityScale, NoUserData,
-        RapierColliderHandle, RapierPhysicsPlugin, RapierRigidBodyHandle, ReadMassProperties,
-        RigidBody, Sleeping, Velocity,
+        RapierPhysicsPlugin, ReadMassProperties, RigidBody, Sleeping, Velocity,
     },
     render::RapierDebugRenderPlugin,
 };
@@ -35,23 +33,21 @@ fn main() {
     App::new()
         .insert_resource(Msaa::Sample4)
         .add_plugins(DefaultPlugins)
-        .add_plugin(EditorPlugin::default())
-        .add_plugin(FrameTimeDiagnosticsPlugin)
-        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-        .add_plugin(RapierDebugRenderPlugin {
-            always_on_top: true,
+        .add_plugins(EditorPlugin::default())
+        .add_plugins(FrameTimeDiagnosticsPlugin)
+        .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+        .add_plugins(RapierDebugRenderPlugin {
             enabled: true,
             ..Default::default()
         })
-        .add_plugin(DebugLinesPlugin::default())
-        .add_system(reset_thrusters.in_base_set(CoreSet::PreUpdate))
-        .add_system(update_max_torque.in_base_set(CoreSet::PreUpdate))
-        .add_system(orientation_regulator)
-        .add_system(player_thrusters)
-        .add_system(thrusters)
-        .add_system(debug_thruster)
-        .add_startup_system(add_test_objects)
-        .add_startup_system(setup_physics)
+        .add_systems(Startup, add_test_objects)
+        .add_systems(Startup, setup_physics)
+        .add_systems(PreUpdate, reset_thrusters)
+        .add_systems(PreUpdate, update_max_torque)
+        .add_systems(Update, orientation_regulator)
+        .add_systems(Update, player_thrusters)
+        .add_systems(Update, thrusters)
+        .add_systems(Update, debug_thruster)
         .register_type::<ThrusterGroup>()
         .register_type::<PlayerShip>()
         .register_type::<Thruster>()
