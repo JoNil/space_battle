@@ -123,7 +123,7 @@ pub fn thrusters(
             }
 
             let pos = transform.transform_point(thruster.offset);
-            let center_of_mass = transform.transform_point(mass_props.0.local_center_of_mass);
+            let center_of_mass = transform.transform_point(mass_props.get().local_center_of_mass);
             let force = magnitude
                 * thruster.thrust
                 * -(transform.rotation * thruster.direction).mul_vec3(-Vec3::Z);
@@ -138,7 +138,7 @@ pub fn thrusters(
         }
 
         {
-            let center_of_mass = transform.transform_point(mass_props.0.local_center_of_mass);
+            let center_of_mass = transform.transform_point(mass_props.get().local_center_of_mass);
             gizmos.line(
                 center_of_mass,
                 center_of_mass + vec3(0.0, 0.3, 0.0),

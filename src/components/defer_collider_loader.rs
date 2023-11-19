@@ -11,7 +11,7 @@ pub fn defer_collider_loader(
     query: Query<(Entity, &DeferColliderLoader, &Handle<Mesh>)>,
 ) {
     for (e, _, m) in query.iter() {
-        if let LoadState::Loaded = server.get_load_state(m) {
+        if let Some(LoadState::Loaded) = server.get_load_state(m) {
             let collider = Collider::from_bevy_mesh(
                 meshes.get(m).unwrap(),
                 &ComputedColliderShape::ConvexHull,

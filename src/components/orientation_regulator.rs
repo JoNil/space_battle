@@ -92,7 +92,7 @@ pub fn orientation_regulator(
                     angle.1,
                     regulator.local_angvel.y,
                     max_torque.negative_torque.y,
-                    mass_props.0.principal_inertia.y,
+                    mass_props.get().principal_inertia.y,
                 );
             }
 
