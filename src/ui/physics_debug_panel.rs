@@ -46,14 +46,6 @@ impl EditorWindow for PhysicsProfilingPanel {
                 "Velocity integration: {:.2}ms",
                 solver.velocity_update_time.time()
             ));
-            ui.label(format!(
-                "Position assembly: {:.2}ms",
-                solver.position_assembly_time.time()
-            ));
-            ui.label(format!(
-                "Position resolution: {:.2}ms",
-                counters.position_resolution_time()
-            ));
         });
         ui.label(format!("CCD: {:.2}ms", counters.ccd_time()));
         ui.indent("CCD", |ui| {

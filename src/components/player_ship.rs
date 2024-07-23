@@ -8,23 +8,23 @@ pub struct PlayerShip;
 
 pub fn player_thrusters(
     mut query: Query<(&PlayerShip, &mut Thrusters)>,
-    keyboard: Res<Input<KeyCode>>,
+    keyboard: Res<ButtonInput<KeyCode>>,
 ) {
     let mut groups_to_fire = ThrusterGroup::NONE;
 
-    if keyboard.pressed(KeyCode::W) {
+    if keyboard.pressed(KeyCode::KeyW) {
         groups_to_fire |= ThrusterGroup::FORWARD;
     }
 
-    if keyboard.pressed(KeyCode::S) {
+    if keyboard.pressed(KeyCode::KeyS) {
         groups_to_fire |= ThrusterGroup::BACKWARD;
     }
 
-    if keyboard.pressed(KeyCode::D) {
+    if keyboard.pressed(KeyCode::KeyD) {
         groups_to_fire |= ThrusterGroup::RIGHT;
     }
 
-    if keyboard.pressed(KeyCode::A) {
+    if keyboard.pressed(KeyCode::KeyA) {
         groups_to_fire |= ThrusterGroup::LEFT;
     }
 

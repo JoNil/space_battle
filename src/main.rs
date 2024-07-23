@@ -223,7 +223,7 @@ pub fn setup_physics(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let mesh = meshes.add(Mesh::from(shape::Box::new(2.0, 2.0, 2.0)));
+    let mesh = meshes.add(Mesh::from(Cuboid::new(2.0, 2.0, 2.0)));
 
     let num = 8;
     let rad = 1.0;

@@ -6,9 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = { version = "0.12", features = ["jpeg"] }
-bevy_editor_pls = "0.6"
-bevy_hanabi = "0.8"
-bevy_rapier3d = { version = "0.23", features = ["parallel", "simd-stable"] }
-rapier3d = { version = "0.17", features = ["profiler"] }
+bevy = { version = "0.14", features = ["jpeg"] }
+bevy_editor_pls = { git = "https://github.com/zhaop/bevy_editor_pls.git", branch = "bevy-0.14" }
+#bevy_hanabi = "0.12"
+bevy_rapier3d = { version = "0.27", features = ["parallel", "simd-stable"] }
+rapier3d = { version = "0.22", features = ["profiler"] }
 serde = { version = "1", features = ["derive"] }

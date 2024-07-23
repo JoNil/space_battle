@@ -133,7 +133,7 @@ pub fn thrusters(
             gizmos.line(
                 pos,
                 pos + 0.4 * -(magnitude * force.normalize()),
-                Color::RED,
+                Srgba::RED,
             );
         }
 
@@ -142,7 +142,7 @@ pub fn thrusters(
             gizmos.line(
                 center_of_mass,
                 center_of_mass + vec3(0.0, 0.3, 0.0),
-                Color::GREEN,
+                Srgba::GREEN,
             );
         }
     }
@@ -154,18 +154,18 @@ pub fn debug_thruster(query: Query<(&Transform, &Thrusters)>, mut gizmos: Gizmos
             let pos = transform.transform_point(thruster.offset);
             let orientation = (transform.rotation * thruster.direction).mul_vec3(-Vec3::Z);
             let end = pos + 0.3 * orientation;
-            gizmos.line(pos, end, Color::BLUE);
+            gizmos.line(pos, end, Srgba::BLUE);
 
             let local_x = transform.rotation * Vec3::X;
             let local_y = transform.rotation * Vec3::Y;
             let local_z = transform.rotation * Vec3::Z;
 
-            gizmos.line(pos, pos + 0.1 * local_x, Color::BLUE);
-            gizmos.line(pos, pos - 0.1 * local_x, Color::BLUE);
-            gizmos.line(pos, pos + 0.1 * local_y, Color::BLUE);
-            gizmos.line(pos, pos - 0.1 * local_y, Color::BLUE);
-            gizmos.line(pos, pos + 0.1 * local_z, Color::BLUE);
-            gizmos.line(pos, pos - 0.1 * local_z, Color::BLUE);
+            gizmos.line(pos, pos + 0.1 * local_x, Srgba::BLUE);
+            gizmos.line(pos, pos - 0.1 * local_x, Srgba::BLUE);
+            gizmos.line(pos, pos + 0.1 * local_y, Srgba::BLUE);
+            gizmos.line(pos, pos - 0.1 * local_y, Srgba::BLUE);
+            gizmos.line(pos, pos + 0.1 * local_z, Srgba::BLUE);
+            gizmos.line(pos, pos - 0.1 * local_z, Srgba::BLUE);
         }
     }
 }
