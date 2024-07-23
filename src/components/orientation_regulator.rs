@@ -124,6 +124,17 @@ pub fn orientation_regulator(
             if regulator.angle_mode {
                 let angle = transform.rotation.to_euler(EulerRot::XYZ);
 
+                regulator.target_angvel.x = calculate_target_angular_velocity(
+                    regulator.target.x,
+                    angle.0,
+                    regulator.local_angvel.x,
+                    max_torque
+                        .positive_torque
+                        .x
+                        .min(max_torque.negative_torque.x),
+                    mass_props.get().principal_inertia.x,
+                );
+
                 regulator.target_angvel.y = calculate_target_angular_velocity(
                     regulator.target.y,
                     angle.1,
@@ -133,6 +144,17 @@ pub fn orientation_regulator(
                         .y
                         .min(max_torque.negative_torque.y),
                     mass_props.get().principal_inertia.y,
+                );
+
+                regulator.target_angvel.z = calculate_target_angular_velocity(
+                    regulator.target.z,
+                    angle.2,
+                    regulator.local_angvel.z,
+                    max_torque
+                        .positive_torque
+                        .z
+                        .min(max_torque.negative_torque.z),
+                    mass_props.get().principal_inertia.z,
                 );
             }
 
