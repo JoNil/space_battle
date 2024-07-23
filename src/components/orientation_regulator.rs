@@ -1,11 +1,10 @@
-use bevy::{math::vec3, prelude::*};
-use bevy_rapier3d::prelude::*;
-use serde::{Deserialize, Serialize};
-
 use super::{
     max_torque::MaxTorque,
     thrusters::{ThrusterGroup, Thrusters},
 };
+use bevy::prelude::*;
+use bevy_rapier3d::prelude::*;
+use serde::{Deserialize, Serialize};
 
 #[derive(Component, Reflect, Serialize, Deserialize)]
 #[reflect(Component, Serialize, Deserialize)]
@@ -15,36 +14,18 @@ pub struct OrientationRegulator {
     #[serde(skip_serializing)]
     local_angvel: Vec3,
     p_gain: f32,
-    i_gain: f32,
-    d_gain: f32,
-    prev_error: Vec3,
-    integral_error: Vec3,
     enable: bool,
-    angle_mode: bool,
 }
 
 impl Default for OrientationRegulator {
     fn default() -> Self {
         Self {
-            target: Quat::from_euler(EulerRot::XYZ, 0.0, 0.5, 0.0),
+            target: Quat::from_euler(EulerRot::XYZ, 0.0, 0.0, 0.0),
             target_angvel: Default::default(),
             local_angvel: Default::default(),
             p_gain: 10.0,
-            i_gain: 0.0,
-            d_gain: 0.0,
-            prev_error: Vec3::ZERO,
-            integral_error: Vec3::ZERO,
             enable: true,
-            angle_mode: true,
         }
-    }
-}
-
-fn positive(v: f32) -> Option<f32> {
-    if v > 0.0 {
-        Some(v)
-    } else {
-        None
     }
 }
 
@@ -108,7 +89,6 @@ fn calculate_target_angular_velocity(
 }
 
 pub fn orientation_regulator(
-    time: Res<Time>,
     mut query: Query<(
         &Transform,
         &Velocity,
@@ -121,40 +101,16 @@ pub fn orientation_regulator(
     for (transform, vel, mass_props, max_torque, mut thrusters, mut regulator) in query.iter_mut() {
         regulator.local_angvel = transform.rotation.inverse().mul_vec3(vel.angvel);
         if regulator.enable {
-            if regulator.angle_mode {
-                let angle = transform.rotation.to_euler(EulerRot::XYZ);
+            let angle = Vec3::from(transform.rotation.to_euler(EulerRot::XYZ));
+            let target_angle = Vec3::from(regulator.target.to_euler(EulerRot::XYZ));
 
-                regulator.target_angvel.x = calculate_target_angular_velocity(
-                    regulator.target.x,
-                    angle.0,
-                    regulator.local_angvel.x,
-                    max_torque
-                        .positive_torque
-                        .x
-                        .min(max_torque.negative_torque.x),
-                    mass_props.get().principal_inertia.x,
-                );
-
-                regulator.target_angvel.y = calculate_target_angular_velocity(
-                    regulator.target.y,
-                    angle.1,
-                    regulator.local_angvel.y,
-                    max_torque
-                        .positive_torque
-                        .y
-                        .min(max_torque.negative_torque.y),
-                    mass_props.get().principal_inertia.y,
-                );
-
-                regulator.target_angvel.z = calculate_target_angular_velocity(
-                    regulator.target.z,
-                    angle.2,
-                    regulator.local_angvel.z,
-                    max_torque
-                        .positive_torque
-                        .z
-                        .min(max_torque.negative_torque.z),
-                    mass_props.get().principal_inertia.z,
+            for axis in 0..3 {
+                regulator.target_angvel[axis] = calculate_target_angular_velocity(
+                    target_angle[axis],
+                    angle[axis],
+                    regulator.local_angvel[axis],
+                    max_torque.positive_torque[axis].min(max_torque.negative_torque[axis]),
+                    mass_props.get().principal_inertia[axis],
                 );
             }
 
@@ -163,14 +119,7 @@ pub fn orientation_regulator(
 
             let error_abs = error.abs();
 
-            let dt = time.delta_seconds();
-            let derivative_error = (error - regulator.prev_error) / dt;
-            regulator.integral_error = (regulator.integral_error + error * dt)
-                .clamp(vec3(-1.0, -1.0, -1.0), vec3(1.0, 1.0, 1.0));
-
-            let thrust = regulator.p_gain * error_abs
-                + regulator.i_gain * regulator.integral_error
-                + regulator.d_gain * derivative_error;
+            let thrust = regulator.p_gain * error_abs;
 
             for axis in 0..3 {
                 if error_abs[axis] > 0.0 {
@@ -183,8 +132,6 @@ pub fn orientation_regulator(
                     thrusters.group_thrust[group.index()] = thrust[axis];
                 }
             }
-
-            regulator.prev_error = error;
 
             thrusters.groups_to_fire |= groups_to_fire;
         }
