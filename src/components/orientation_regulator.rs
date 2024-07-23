@@ -74,41 +74,37 @@ fn calculate_target_angular_velocity(
     let cube_1 = remaning_angle / angular_acceleration + q * q;
     let cube_2 = -remaning_angle / angular_acceleration + q * q;
 
-    if dbg!(cube_1) > 0.0 {
+    if cube_1 > 0.0 {
         let time_to_target_1 = -q + cube_1.sqrt();
         let time_to_target_2 = -q - cube_1.sqrt();
 
         if time_to_target_1 > 0.0 {
-            time_to_target = dbg!(time_to_target_1).min(time_to_target);
+            time_to_target = time_to_target_1.min(time_to_target);
         }
 
         if time_to_target_2 > 0.0 {
-            time_to_target = dbg!(time_to_target_2).min(time_to_target);
+            time_to_target = time_to_target_2.min(time_to_target);
         }
     }
 
-    if dbg!(cube_2) > 0.0 {
+    if cube_2 > 0.0 {
         let time_to_target_1 = q + cube_2.sqrt();
         let time_to_target_2 = q - cube_2.sqrt();
 
         if time_to_target_1 > 0.0 {
-            time_to_target = dbg!(time_to_target_1).min(time_to_target);
+            time_to_target = time_to_target_1.min(time_to_target);
         }
 
         if time_to_target_2 > 0.0 {
-            time_to_target = dbg!(time_to_target_2).min(time_to_target);
+            time_to_target = time_to_target_2.min(time_to_target);
         }
     }
 
-    let res = 10.0
-        * if time_to_stop.abs() > time_to_target.abs() {
-            -angular_velocity.signum()
-        } else {
-            dir
-        };
-
-    info!("ttt {time_to_target:.3} tts {time_to_stop:.3} ra {remaning_angle:.3} ta {target_angle:.3} a {angle:.3} res {res}");
-    res
+    10.0 * if time_to_stop.abs() > time_to_target.abs() {
+        -angular_velocity.signum()
+    } else {
+        dir
+    }
 }
 
 pub fn orientation_regulator(
