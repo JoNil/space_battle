@@ -1,4 +1,4 @@
-use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, math::vec3, prelude::*};
+use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, math::vec3, prelude::*, scene::ron::de};
 use bevy_editor_pls::{AddEditorWindow, EditorPlugin};
 use bevy_rapier3d::{prelude::*, render::RapierDebugRenderPlugin};
 use components::{
@@ -6,6 +6,7 @@ use components::{
     max_torque::{update_max_torque, MaxTorque},
     orientation_regulator::{orientation_regulator, OrientationRegulator},
     player_ship::{player_thrusters, PlayerShip},
+    target::{target_update_system, Target},
     thrusters::{debug_thruster, reset_thrusters, thrusters, Thruster, ThrusterGroup, Thrusters},
 };
 use std::f32::consts::PI;
@@ -31,6 +32,7 @@ fn main() {
             Update,
             (
                 (
+                    target_update_system,
                     (reset_thrusters, update_max_torque),
                     (player_thrusters, orientation_regulator),
                     thrusters,
@@ -56,6 +58,7 @@ fn add_test_objects(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
 ) {
     commands
         .spawn(PbrBundle {
@@ -204,6 +207,19 @@ fn add_test_objects(
         transform: Transform::from_translation(Vec3::new(0.0, 5.0, 5.0)),
         ..Default::default()
     });
+
+    commands
+        .spawn(PbrBundle {
+            mesh: meshes.add(Mesh::from(Cuboid::new(1.0, 1.0, 1.0))),
+            material: materials.add(StandardMaterial {
+                base_color: Color::srgb(1.0, 0.0, 1.0),
+                ..default()
+            }),
+            transform: Transform::from_translation(vec3(2.0, 3.0, -5.0)),
+            ..Default::default()
+        })
+        .insert(Target {})
+        .insert(Name::new("Target"));
 
     commands
         .spawn(PbrBundle {

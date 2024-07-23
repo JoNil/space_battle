@@ -29,6 +29,12 @@ impl Default for OrientationRegulator {
     }
 }
 
+impl OrientationRegulator {
+    pub fn update_target(&mut self, target: Quat) {
+        self.target = target;
+    }
+}
+
 fn calculate_target_angular_velocity(
     target_angle: f32,
     angle: f32,
