@@ -26,7 +26,7 @@ pub struct OrientationRegulator {
 impl Default for OrientationRegulator {
     fn default() -> Self {
         Self {
-            target: Default::default(),
+            target: Quat::from_euler(EulerRot::XYZ, 0.0, 0.5, 0.0),
             target_angvel: Default::default(),
             local_angvel: Default::default(),
             p_gain: 10.0,
@@ -35,12 +35,19 @@ impl Default for OrientationRegulator {
             prev_error: Vec3::ZERO,
             integral_error: Vec3::ZERO,
             enable: true,
-            angle_mode: false,
+            angle_mode: true,
         }
     }
 }
 
-// https://chat.openai.com/c/1bc5a952-eb65-4f1b-8849-323d84036579
+fn positive(v: f32) -> Option<f32> {
+    if v > 0.0 {
+        Some(v)
+    } else {
+        None
+    }
+}
+
 fn calculate_target_angular_velocity(
     target_angle: f32,
     angle: f32,
@@ -48,26 +55,60 @@ fn calculate_target_angular_velocity(
     max_torque: f32,
     angular_inertia: f32,
 ) -> f32 {
-    // 1. Calculate angular displacement
-    let delta_theta = target_angle - angle;
+    if angular_inertia == 0.0 {
+        return angular_velocity;
+    }
 
-    // 2. Calculate the remaining time to reach the target angle
-    let angular_acceleration_due_to_max_torque = max_torque / angular_inertia;
-    let remaining_time = (2.0 * delta_theta / angular_acceleration_due_to_max_torque)
-        .abs()
-        .sqrt();
+    let angular_acceleration = max_torque / angular_inertia;
 
-    // 3. Calculate the required angular acceleration to achieve the angular displacement in the remaining time
-    let required_angular_acceleration = 2.0 * delta_theta / (remaining_time * remaining_time);
+    let remaning_angle = angle_difference(target_angle, angle);
 
-    // 4. Calculate the torque needed to achieve the required angular acceleration, considering the maximum torque and the moment of inertia
-    let desired_torque = angular_inertia * required_angular_acceleration;
-    let applied_torque = desired_torque.clamp(-max_torque, max_torque);
+    let dir = remaning_angle.signum();
 
-    // Update the target angular velocity based on the calculated torque and the current angular velocity
-    let delta_angular_velocity = applied_torque / angular_inertia;
+    let time_to_stop = angular_velocity.abs() / angular_acceleration;
 
-    angular_velocity + delta_angular_velocity
+    let mut time_to_target = 1000.0;
+
+    let q = angular_velocity / (2.0 * angular_acceleration);
+
+    let cube_1 = remaning_angle / angular_acceleration + q * q;
+    let cube_2 = -remaning_angle / angular_acceleration + q * q;
+
+    if dbg!(cube_1) > 0.0 {
+        let time_to_target_1 = -q + cube_1.sqrt();
+        let time_to_target_2 = -q - cube_1.sqrt();
+
+        if time_to_target_1 > 0.0 {
+            time_to_target = dbg!(time_to_target_1).min(time_to_target);
+        }
+
+        if time_to_target_2 > 0.0 {
+            time_to_target = dbg!(time_to_target_2).min(time_to_target);
+        }
+    }
+
+    if dbg!(cube_2) > 0.0 {
+        let time_to_target_1 = q + cube_2.sqrt();
+        let time_to_target_2 = q - cube_2.sqrt();
+
+        if time_to_target_1 > 0.0 {
+            time_to_target = dbg!(time_to_target_1).min(time_to_target);
+        }
+
+        if time_to_target_2 > 0.0 {
+            time_to_target = dbg!(time_to_target_2).min(time_to_target);
+        }
+    }
+
+    let res = 10.0
+        * if time_to_stop.abs() > time_to_target.abs() {
+            -angular_velocity.signum()
+        } else {
+            dir
+        };
+
+    info!("ttt {time_to_target:.3} tts {time_to_stop:.3} ra {remaning_angle:.3} ta {target_angle:.3} a {angle:.3} res {res}");
+    res
 }
 
 pub fn orientation_regulator(
@@ -91,7 +132,10 @@ pub fn orientation_regulator(
                     regulator.target.y,
                     angle.1,
                     regulator.local_angvel.y,
-                    max_torque.negative_torque.y,
+                    max_torque
+                        .positive_torque
+                        .y
+                        .min(max_torque.negative_torque.y),
                     mass_props.get().principal_inertia.y,
                 );
             }
@@ -127,4 +171,9 @@ pub fn orientation_regulator(
             thrusters.groups_to_fire |= groups_to_fire;
         }
     }
+}
+
+fn angle_difference(a: f32, b: f32) -> f32 {
+    use std::f32::consts::{PI, TAU};
+    f32::rem_euclid(a + PI - b, TAU) - PI
 }
