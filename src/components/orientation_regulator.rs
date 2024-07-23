@@ -1,10 +1,8 @@
-use std::cmp::Ordering;
-
 use super::{
     max_torque::MaxTorque,
     thrusters::{ThrusterGroup, Thrusters},
 };
-use bevy::{math::VectorSpace, prelude::*};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -38,8 +36,7 @@ impl OrientationRegulator {
 }
 
 fn calculate_target_angular_velocity(
-    target_angle: f32,
-    angle: f32,
+    remaning_angle: f32,
     angular_velocity: f32,
     max_torque: f32,
     angular_inertia: f32,
@@ -49,8 +46,6 @@ fn calculate_target_angular_velocity(
     }
 
     let angular_acceleration = max_torque / angular_inertia;
-
-    let remaning_angle = angle_difference(target_angle, angle);
 
     let dir = remaning_angle.signum();
 
@@ -109,15 +104,13 @@ pub fn orientation_regulator(
     for (transform, vel, mass_props, max_torque, mut thrusters, mut regulator) in query.iter_mut() {
         regulator.local_angvel = transform.rotation.inverse().mul_vec3(vel.angvel);
         if regulator.enable {
-            let angle = Vec3::ZERO;
-            let target_angle = Vec3::from(
+            let remaning_angle = Vec3::from(
                 (transform.rotation.inverse() * regulator.target).to_euler(EulerRot::XYZ),
             );
 
             for axis in 0..3 {
                 regulator.target_angvel[axis] = calculate_target_angular_velocity(
-                    target_angle[axis],
-                    angle[axis],
+                    remaning_angle[axis],
                     regulator.local_angvel[axis],
                     max_torque.positive_torque[axis].min(max_torque.negative_torque[axis]),
                     mass_props.get().principal_inertia[axis],
@@ -146,9 +139,4 @@ pub fn orientation_regulator(
             thrusters.groups_to_fire |= groups_to_fire;
         }
     }
-}
-
-fn angle_difference(a: f32, b: f32) -> f32 {
-    use std::f32::consts::{PI, TAU};
-    f32::rem_euclid(a + PI - b, TAU) - PI
 }
