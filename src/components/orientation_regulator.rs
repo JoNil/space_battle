@@ -1,8 +1,10 @@
+use std::cmp::Ordering;
+
 use super::{
     max_torque::MaxTorque,
     thrusters::{ThrusterGroup, Thrusters},
 };
-use bevy::prelude::*;
+use bevy::{math::VectorSpace, prelude::*};
 use bevy_rapier3d::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -107,8 +109,10 @@ pub fn orientation_regulator(
     for (transform, vel, mass_props, max_torque, mut thrusters, mut regulator) in query.iter_mut() {
         regulator.local_angvel = transform.rotation.inverse().mul_vec3(vel.angvel);
         if regulator.enable {
-            let angle = Vec3::from(transform.rotation.to_euler(EulerRot::XYZ));
-            let target_angle = Vec3::from(regulator.target.to_euler(EulerRot::XYZ));
+            let angle = Vec3::ZERO;
+            let target_angle = Vec3::from(
+                (transform.rotation.inverse() * regulator.target).to_euler(EulerRot::XYZ),
+            );
 
             for axis in 0..3 {
                 regulator.target_angvel[axis] = calculate_target_angular_velocity(
