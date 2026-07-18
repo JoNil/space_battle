@@ -1,0 +1,81 @@
+{
+  "name": "Asterion Mk I",
+  "revision": 3,
+  "units": "metres",
+  "axis_convention": {
+    "+X": "forward",
+    "+Y": "port",
+    "+Z": "dorsal"
+  },
+  "overall_length_m": 43.0,
+  "overall_deployed_radiator_span_m": 23.8,
+  "main_truss_length_m": 20.0,
+  "main_truss_outer_radius_m": 2.35,
+  "crew": {
+    "count": 2,
+    "gross_pressurized_volume_m3": 58.0,
+    "mission_duration": "extended",
+    "centre_x_m": 17.2
+  },
+  "propellant_tank": {
+    "centre_x_m": 10.35,
+    "cylindrical_length_m": 4.8,
+    "outer_radius_m": 2.28,
+    "contents": "simulation parameter: fusion fuel and/or reaction mass",
+    "placement_note": "Forward of the truss and behind the crew; separated from the radioactive engine by the full truss and shadow shield."
+  },
+  "main_engine": {
+    "centre_x_m": -16.8,
+    "assumption": "speculative compact fusion drive",
+    "target_average_acceleration_m_s2": 9.80665,
+    "target_duration_days": "several",
+    "fuel_energy_density_j_kg": null,
+    "effective_exhaust_velocity_m_s": null,
+    "efficiency": null
+  },
+  "main_gun": {
+    "calibre_m": 0.12,
+    "barrel_class": "L/55",
+    "barrel_length_m": 6.6,
+    "nominal_recoil_travel_m": 0.48,
+    "mount": "skeletal yaw ring and elevation trunnion",
+    "pivot_x_m": 0.0,
+    "yaw_ring_z_m": 2.55,
+    "trunnion_and_bore_axis_z_m": 3.7
+  },
+  "radiator_system": {
+    "heat_load_w": 500000,
+    "design_margin": 1.2,
+    "design_rejection_w": 600000,
+    "surface_temperature_k": 500,
+    "infrared_emissivity": 0.88,
+    "panel_fin_efficiency": 0.9,
+    "deep_space_view_factor": 0.98,
+    "emitting_faces": 2,
+    "effective_two_face_flux_w_m2": 5501.397,
+    "required_planform_area_nominal_m2": 90.886,
+    "required_planform_area_with_margin_m2": 109.063,
+    "modeled_active_area_m2": 111.821,
+    "modeled_rejection_capacity_w": 615171,
+    "wing_count": 2,
+    "modules_per_wing": 24,
+    "independently_isolatable_circuits_per_wing": 4,
+    "gross_dimensions_per_wing_m": [6.4, 9.2],
+    "orientation": "Radial XY planes with emitting-face normals along +Z and -Z; the vehicle is edge-on to both broad faces.",
+    "estimated_system_areal_density_kg_m2": 8.0,
+    "estimated_system_mass_kg": 894.6
+  },
+  "service_runs": {
+    "fuel_feed_outer_diameter_m": 0.12,
+    "fuel_feed_count": 2,
+    "power_bus_outer_diameter_m": 0.065,
+    "power_bus_count": 2,
+    "note": "Conductor gauge and insulation must be derived from bus voltage, continuous current, transient current, cooling, and allowable voltage drop."
+  },
+  "mass_properties": {
+    "status": "placeholder pending subsystem-level mass model",
+    "dry_mass_kg": null,
+    "wet_mass_kg": null,
+    "radiator_system_estimate_kg": 894.6
+  }
+}

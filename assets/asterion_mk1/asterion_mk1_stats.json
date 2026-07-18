@@ -1,0 +1,23 @@
+{
+  "asset": "Asterion Mk I",
+  "mesh_objects": 826,
+  "vertices": 16942,
+  "polygons": 12916,
+  "triangles": 29752,
+  "mesh_objects_with_uv": 826,
+  "mesh_objects_without_uv": [],
+  "collections": {
+    "00_MASTER": 1,
+    "01_STRUCTURE": 267,
+    "02_PROPULSION": 263,
+    "03_HABITAT": 41,
+    "04_FUEL": 16,
+    "05_ARMAMENT": 93,
+    "06_UTILITIES": 54,
+    "07_SENSORS": 15,
+    "08_RCS": 72,
+    "09_MARKINGS": 9,
+    "10_PRESENTATION": 4
+  },
+  "uv_audit_pass": true
+}
